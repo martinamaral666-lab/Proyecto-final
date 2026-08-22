@@ -11,20 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('cobros', function (Blueprint $table) {
-            $table->id();
 
-            $table->foreignId('cliente_id')->constrained()->onDelete('cascade');
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-
-            $table->decimal('cantidad', 10, 2);
-            $table->string('concepto');
-            $table->enum('estado',['pendiente', 'completado', 'cancelado'])->default('pendiente');
-            $table->string('receipt_token')->unique();
-            $table->timestamp('fecha_de_pago')->nullable();
-
-            $table->timestamps();
-        });
+      Schema::create('cobros', function (Blueprint $table) {
+        $table->id();
+        $table->string('nombre_cliente');
+        $table->string('telefono');
+        $table->string('concepto');
+        $table->decimal('monto', 10, 2);
+        $table->string('mano_de_obra');
+        $table->text('motivo_no_realizado')->nullable();
+        $table->timestamps();
+    });
     }
 
     /**
@@ -35,3 +32,4 @@ return new class extends Migration
         Schema::dropIfExists('cobros');
     }
 };
+

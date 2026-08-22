@@ -1,14 +1,38 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminRegistroEmpleados;
+use App\Http\Controllers\ClienteController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CobrosController;
 use App\Models\Cliente;
+use App\Http\Controllers\Auth\LoginController;
 
-// Grupo de rutas protegidas por el middleware de autenticación ('auth')
+Route::get('/css/{filename}', function ($filename) {
+    $path = resource_path('views/css/' . $filename);
+    if (!file_exists($path)) {
+        abort(404);
+    }
+    return response()->file($path, ['Content-Type' => 'text/css']);
+});
+
+Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [LoginController::class, 'login'])->name('login.post');
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+
+// 2. RUTAS PROTEGIDAS (Solo accesibles una vez iniciada la sesión)
 Route::middleware(['auth'])->group(function () {
-    // Ruta POST para guardar/procesar un nuevo cobro en la base de datos
-    Route::post('/cobros', [CobrosController::class, 'store'])->name('cobros.store');
 
+    // Ruta de Empleado
+    Route::get('/cobro', [CobrosController::class, 'create'])->name('empleado.cobro');
+Route::post('/cobro', [CobrosController::class, 'store'])->name('cobro.store');
+
+    // Rutas de Admin
+    Route::get('/admin/empleados/registrar', [AdminRegistroEmpleados::class, 'create'])->name('admin.empleados.create');
+Route::post('/admin/empleados/registrar', [AdminRegistroEmpleados::class, 'store'])->name('admin.empleados.store');
+
+    Route::get('/admin/clientes/registrar', [ClienteController::class, 'create'])->name('clientes.create');
+    Route::post('/admin/clientes/registrar', [ClienteController::class, 'store'])->name('clientes.store');
 });
 
 
