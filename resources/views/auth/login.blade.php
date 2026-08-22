@@ -105,28 +105,22 @@
 
         </div>
 
-        <form method="POST" action="{{ route('login.post') }}">
-    @csrf
+        <form method="POST" action="{{ route('login') }}">
+            @csrf
 
-    @if ($errors->any())
-        <div style="color: red; padding: 10px; background: #fee; margin-bottom: 15px; border-radius: 4px;">
-            <ul>
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+            <div class="form-group">
+                <label for="email">Correo Electrónico</label>
+                <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus placeholder="tu@correo.com">
+            </div>
 
-    <div class="form-group">
-        <label for="email">Correo Electrónico</label>
-        <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus placeholder="tu@correo.com">
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <input id="password" type="password" name="password" required placeholder="••••••••">
+            </div>
+
+            <button type="submit" class="btn-submit">Ingresar</button>
+        </form>
     </div>
 
-    <div class="form-group">
-        <label for="password">Contraseña</label>
-        <input id="password" type="password" name="password" required placeholder="••••••••">
-    </div>
-
-    <button type="submit" class="btn-submit">Ingresar</button>
-</form>
+</body>
+</html>

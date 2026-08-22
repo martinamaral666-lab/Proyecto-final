@@ -1,56 +1,39 @@
 <?php
 
-use App\Http\Controllers\CobrosController;
-use App\Models\User;
-use App\Models\Cobros;
-use Illuminate\Http\Request;
+use App\Http\Controllers\Admin\AdminRegistroEmpleados;
+use App\Http\Controllers\ClienteController;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
+use App\Http\Controllers\CobrosController;
+use App\Models\Cliente;
+use App\Http\Controllers\Auth\LoginController;
 
-Route::get('/', function () {
-    return view('auth.login');
-})->name('login');
-
-// metodo para identificar si es empleado o admin en el login
-Route::post('/login-process', function (Request $request) {
-    $credentials = $request->validate([
-        'email' => ['required', 'email'],
-        'password' => ['required'],
-    ]);
-
-    if (Auth::attempt($credentials)) {
-        $request->session()->regenerate();
-
-        $user = Auth::user();
-
-        if ($user->rol === 'admin') {
-            return redirect()->route('admin.menu');
-        }
-
-        if ($user->rol === 'empleado') {
-            return redirect()->route('cobros.cobro');
-        }
-
-        return redirect()->route('admin.menu');
+Route::get('/css/{filename}', function ($filename) {
+    $path = resource_path('views/css/' . $filename);
+    if (!file_exists($path)) {
+        abort(404);
     }
+    return response()->file($path, ['Content-Type' => 'text/css']);
+});
 
-    return back()->withErrors([
-        'email' => 'Los datos ingresado son incorrectos.',
-    ])->onlyInput('email');
-})->name('login.post');
+Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [LoginController::class, 'login'])->name('login.post');
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
-// Ruta para cerrar sesión
-Route::post('/logout', function (Request $request) {
-    Auth::logout();
-    $request->session()->invalidate();
-    $request->session()->regenerateToken();
 
-    return redirect()->route('login');
-})->name('logout');
+// 2. RUTAS PROTEGIDAS (Solo accesibles una vez iniciada la sesión)
+Route::middleware(['auth'])->group(function () {
 
-// Rutas de empleado y admin
-Route::get('/menu/admin', [CobrosController::class, 'adminmenu'])->name('admin.menu');
+    // Ruta de Empleado
+    Route::get('/cobro', [CobrosController::class, 'create'])->name('empleado.cobro');
+Route::post('/cobro', [CobrosController::class, 'store'])->name('cobro.store');
+
+    // Rutas de Admin
+    Route::get('/admin/empleados/registrar', [AdminRegistroEmpleados::class, 'create'])->name('admin.empleados.create');
+Route::post('/admin/empleados/registrar', [AdminRegistroEmpleados::class, 'store'])->name('admin.empleados.store');
+
+    Route::get('/admin/clientes/registrar', [ClienteController::class, 'create'])->name('clientes.create');
+    Route::post('/admin/clientes/registrar', [ClienteController::class, 'store'])->name('clientes.store');
+});
 
 
 // Ruta de Cobros

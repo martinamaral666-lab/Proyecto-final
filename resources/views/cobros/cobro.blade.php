@@ -22,20 +22,17 @@
 <div class="card-cobro">
     <div class="card-header">
         <h2>Registrar Cobro</h2>
+        <small>Ingresa los datos del pago recibido</small>
     </div>
 
-    @if ($errors->any())
-        <div class="alert-error">
-            <ul>
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
-    <form action="{{ route('cobros.store') }}" method="POST">
+    <form action="{{ route('cobro.store') }}" method="POST" class="form-cobro">
         @csrf
+
+        @if(session('success'))
+            <div class="alert-success">
+                {{ session('success') }}
+            </div>
+        @endif
 
         <div class="form-group">
             <label for="nombre_cliente">Nombre del Cliente</label>
