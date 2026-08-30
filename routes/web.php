@@ -1,40 +1,85 @@
 <?php
 
-use App\Http\Controllers\Admin\AdminRegistroEmpleados;
-use App\Http\Controllers\ClienteController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CobrosController;
-use App\Models\Cliente;
-use App\Http\Controllers\Auth\LoginController;
+use App\Models\User;
+use App\Models\Cobros;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 
-Route::get('/css/{filename}', function ($filename) {
-    $path = resource_path('views/css/' . $filename);
-    if (!file_exists($path)) {
-        abort(404);
+Route::get('/', function () {
+    return view('auth.login');
+})->name('login');
+
+// metodo para identificar si es empleado o admin en el login
+Route::post('/login-process', function (Request $request) {
+    $credentials = $request->validate([
+        'email' => ['required', 'email'],
+        'password' => ['required'],
+    ]);
+
+    if (Auth::attempt($credentials)) {
+        $request->session()->regenerate();
+
+        $user = Auth::user();
+
+        if ($user->rol === 'admin') {
+            return redirect()->route('admin.menu');
+        }
+
+        if ($user->rol === 'empleado') {
+            return redirect()->route('cobros.cobro');
+        }
+
+        return redirect()->route('admin.menu');
     }
-    return response()->file($path, ['Content-Type' => 'text/css']);
-});
 
-Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [LoginController::class, 'login'])->name('login.post');
-Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+    return back()->withErrors([
+        'email' => 'Los datos ingresado son incorrectos.',
+    ])->onlyInput('email');
+})->name('login.post');
+
+// Ruta para cerrar sesión
+Route::post('/logout', function (Request $request) {
+    Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect()->route('login');
+})->name('logout');
+
+// Rutas de empleado y admin
+Route::get('/menu/admin', [CobrosController::class, 'adminmenu'])->name('admin.menu');
 
 
-// 2. RUTAS PROTEGIDAS (Solo accesibles una vez iniciada la sesión)
-Route::middleware(['auth'])->group(function () {
+// Ruta de Cobros
+Route::get('/cobros', function () {
+    $cobros = Cobros::paginate(10);
+    return view('cobros.index', compact('cobros'));
+})->name('cobros.index');
 
-    // Ruta de Empleado
-    Route::get('/cobro', [CobrosController::class, 'create'])->name('empleado.cobro');
-Route::post('/cobro', [CobrosController::class, 'store'])->name('cobro.store');
+Route::get('/admin/empleados/crear', function () {
+    return view('admin.empleados.create');
+})->name('admin.empleados.create');
 
-    // Rutas de Admin
-    Route::get('/admin/empleados/registrar', [AdminRegistroEmpleados::class, 'create'])->name('admin.empleados.create');
-Route::post('/admin/empleados/registrar', [AdminRegistroEmpleados::class, 'store'])->name('admin.empleados.store');
+Route::post('/cobro/store', [CobrosController::class, 'store'])->name('cobros.store');
 
-    Route::get('/admin/clientes/registrar', [ClienteController::class, 'create'])->name('clientes.create');
-    Route::post('/admin/clientes/registrar', [ClienteController::class, 'store'])->name('clientes.store');
-});
+// metodo para poder registrar al empleado y que se guarde en la base de datos
+Route::post('/admin/store', function (Request $request) {
+ $request->validate([
+        'name'     => 'required|string|max:255',
+        'email'    => 'required|string|email|max:255|unique:users',
+        'password' => 'required|string|min:6',
+ ]);
 
+ User::create([
+        'name'     => $request->name,
+        'email'    => trim($request->email),
+        'password' => Hash::make($request->password),
+        'rol'      => 'empleado',
+ ]);
+ return redirect()->route('admin.menu');
+})->name('admin.empleados.store');
 
 // Ruta de Cobros
 Route::get('/crear/cobros', function () {

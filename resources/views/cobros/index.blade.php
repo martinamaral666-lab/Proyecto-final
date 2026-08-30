@@ -102,12 +102,11 @@
             @endforelse
         </div>
 
-        <!-- PAGINACIÓN -->
-        <div class="mt-4">
+        <!-- Paginador de Laravel -->
+        <div class="pagination-wrapper">
             {{ $cobros->links() }}
         </div>
-
-    </main>
+    </div>
 
 </body>
 </html>

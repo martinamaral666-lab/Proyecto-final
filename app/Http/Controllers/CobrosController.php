@@ -10,8 +10,6 @@ use App\Mail\NotificacionCobroAdmin;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
-
-
 class CobrosController extends Controller
 {
     public function index()
@@ -136,7 +134,10 @@ class CobrosController extends Controller
         ));
     }
 }
+<<<<<<< HEAD
 
 
 
 
+=======
+>>>>>>> c14ab50 (feat: diseño de registro de empleados y recibos)
