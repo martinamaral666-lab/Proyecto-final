@@ -10,7 +10,13 @@ class Cobros extends Model
     /** @use HasFactory<\Database\Factories\CobrosFactory> */
     use HasFactory;
 
-    protected $fillable = ['cliente_id','user_id','cantidad','concepto','estado','receipt_token','fecha_de_pago'];
+    protected $fillable = [
+        'nombre_cliente',
+        'telefono',
+        'concepto',
+        'monto',
+        'mano_de_obra',
+        'motivo_no_realizado',];
 
     public function cliente()
     {
