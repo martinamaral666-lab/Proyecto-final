@@ -1,56 +1,88 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CobrosController;
-use App\Models\Cliente;
+use App\Models\User;
+use App\Models\Cobros;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 
-Route::middleware(['auth'])->group(function () {
-    Route::post('/cobros', [CobrosController::class, 'store'])->name('cobros.store');
-});
-Route::get('/admin/menu', [CobrosController::class, 'adminmenu'])->name('admin.menu');
+Route::get('/', function () {
+    return view('auth.login');
+})->name('login');
 
-Route::get('/cobros/crear', [CobrosController::class, 'create'])->name('cobros.create');
+// metodo para identificar si es empleado o admin en el login
+Route::post('/login-process', function (Request $request) {
+    $credentials = $request->validate([
+        'email' => ['required', 'email'],
+        'password' => ['required'],
+    ]);
 
-Route::get('/cobros', [CobrosController::class, 'index'])->name('cobros.index');
+    if (Auth::attempt($credentials)) {
+        $request->session()->regenerate();
 
-Route::get('/recibo/{token}', [CobrosController::class, 'showPublicReceipt'])->name('recibo.publico');
+        $user = Auth::user();
 
-Route::inertia('/', 'Welcome')->name('home');
+        if ($user->rol === 'admin') {
+            return redirect()->route('admin.menu');
+        }
+
+        if ($user->rol === 'empleado') {
+            return redirect()->route('cobros.cobro');
+        }
+
+        return redirect()->route('admin.menu');
+    }
+
+    return back()->withErrors([
+        'email' => 'Los datos ingresado son incorrectos.',
+    ])->onlyInput('email');
+})->name('login.post');
+
+// Ruta para cerrar sesión
+Route::post('/logout', function (Request $request) {
+    Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect()->route('login');
+})->name('logout');
+
+// Rutas de empleado y admin
+Route::get('/menu/admin', [CobrosController::class, 'adminmenu'])->name('admin.menu');
 
 
+// Ruta de Cobros
+Route::get('/crear/cobros', function () {
+    $cobros = Cobros::paginate(10);
+    return view('cobros.cobro', compact('cobros'));
+})->name('cobros.cobro');
 
-Route::get('/probar-cobro', function () {
+Route::get('/cobros', function () {
+    $cobros = Cobros::paginate(10);
+    return view('cobros.index', compact('cobros'));
+})->name('cobros.index');
 
-    auth()->loginUsingId(1);
+Route::get('/admin/empleados/crear', function () {
+    return view('admin.empleados.create');
+})->name('admin.empleados.create');
 
-    $clientes = Cliente::all();
+Route::post('/cobro/store', [CobrosController::class, 'store'])->name('cobros.store');
 
-    $options = $clientes->map(fn($c) => "<option value='{$c->id}'>{$c->nombre} ({$c->telefono})</option>")->join('');
+// metodo para poder registrar al empleado y que se guarde en la base de datos
+Route::post('/admin/store', function (Request $request) {
+ $request->validate([
+        'name'     => 'required|string|max:255',
+        'email'    => 'required|string|email|max:255|unique:users',
+        'password' => 'required|string|min:6',
+ ]);
 
-    return '
-    <form action="'.route('cobros.store').'" method="POST" style="font-family:sans-serif; max-width: 400px; margin: 50px auto; padding: 20px; border: 1px solid #ccc; border-radius: 8px;">
-        '.csrf_field().'
-        <h2>Registrar Cobro (Modo Prueba)</h2>
+ User::create([
+        'name'     => $request->name,
+        'email'    => trim($request->email),
+        'password' => Hash::make($request->password),
+        'rol'      => 'empleado',
+ ]);
+ return redirect()->route('admin.menu');
+})->name('admin.empleados.store');
 
-        <label>Cliente:</label><br>
-        <select name="cliente_id" style="width:100%; margin-bottom:15px; padding:8px;">
-            '.$options.'
-        </select><br>
-
-        <label>Monto ($):</label><br>
-        <input type="number" name="cantidad" value="1500" style="width:100%; margin-bottom:15px; padding:8px;"><br>
-
-        <label>Concepto:</label><br>
-        <input type="text" name="concepto" value="Cuota de servicio" style="width:100%; margin-bottom:15px; padding:8px;"><br>
-
-        <button type="submit" style="background:green; color:white; border:none; padding:10px 15px; cursor:pointer; width:100%;">
-            Cobrar y enviar por WhatsApp
-        </button>
-    </form>
-    ';
-
-    Route::get('/login', function (){
-        auth()->loginUsingId(1);
-        return redirect()->route('cobros.index');
-    })->name('login');
-});

@@ -3,160 +3,134 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cobros;
-use App\Models\Cliente;
-use App\Http\Requests\StoreCobrosRequest;
-use App\Http\Requests\UpdateCobrosRequest;
-use Illuminate\Support\Str;
- use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\NotificacionCobroAdmin;
+use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class CobrosController extends Controller
 {
-
-
-public function adminmenu()
-{
-    $hoy = Carbon::today();
-    $inicioSemana = Carbon::now()->startOfWeek();
-    $inicioMes = Carbon::now()->startOfMonth();
-
-
-    $ventasHoy = Cobros::whereDate('created_at', $hoy)->sum('cantidad');
-    $ventasSemana = Cobros::where('created_at', '>=', $inicioSemana)->sum('cantidad');
-    $ventasMes = Cobros::where('created_at', '>=', $inicioMes)->sum('cantidad');
-
-
-    $dias = [];
-    $totalesPorDia = [];
-
-    for ($i = 6; $i >= 0; $i--) {
-        $fecha = Carbon::today()->subDays($i);
-        $dias[] = $fecha->format('d/m');
-        $totalesPorDia[] = Cobros::whereDate('created_at', $fecha)->sum('cantidad');
-    }
-
-    $ultimosCobros = Cobros::with('cliente')->latest()->take(5)->get();
-
-    return view('admin.menu', compact(
-        'ventasHoy',
-        'ventasSemana',
-        'ventasMes',
-        'dias',
-        'totalesPorDia',
-        'ultimosCobros'
-    ));
-}
-
-
     public function index()
     {
-        $cobros = Cobros::where('user_id', auth()->id())
-          ->with('cliente')
-          ->latest()
-          ->paginate(15);
-
-        $totalHoy = Cobros::where('user_id', auth()->id())
-          ->whereDate('fecha_de_pago', today())
-          ->sum('cantidad');
-
-        return view('cobros.index', compact('cobros', 'totalHoy'));
+        $cobros = Cobros::latest()->paginate(10);
+        return view('cobros.index', compact('cobros'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        $cliente = Cliente::all();
-        return view('cobros.create', compact('cliente'));
+        return view('cobros.create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreCobrosRequest $request)
+    public function adminIndex()
+    {
+        $cobros = Cobros::latest()->paginate(15);
+        return view('admin.cobros.index', compact('cobros'));
+    }
+
+    public function store(Request $request)
     {
         $request->validate([
-          'cliente_id' => 'required|exists:clientes,id',
-          'cantidad' => 'required|numeric|min:1',
-          'concepto' => 'required|string|max:250',
+            'nombre_cliente'      => 'required|string|max:255',
+            'telefono'            => 'required|string',
+            'concepto'            => 'required|string|max:255',
+            'monto'               => 'required|numeric',
+            'mano_de_obra'        => 'required|in:si,no',
+            'motivo_no_realizado' => 'nullable|required_if:mano_de_obra,no|string|max:255',
         ]);
 
-    try{
-          $cobro = Cobros::create([
-            'cliente_id' => $request->cliente_id,
-            'user_id' =>auth()->id(),
-            'cantidad' =>$request->cantidad,
-            'concepto' =>$request->concepto,
-            'estado' => 'completado',
-            'receipt_token' => Str::random(32),
-            'fecha_de_pago' => now(),
+        // 1. Guardar en la Base de Datos
+        $cobro = Cobros::create([
+            'nombre_cliente'      => $request->nombre_cliente,
+            'telefono'            => $request->telefono,
+            'concepto'            => $request->concepto,
+            'monto'               => $request->monto,
+            'mano_de_obra'        => $request->mano_de_obra,
+            'motivo_no_realizado' => $request->mano_de_obra === 'no' ? $request->motivo_no_realizado : null,
         ]);
-       return redirect()->route('cobros.index')
-          ->with('succes', 'el recibo se envio correctamente.');
-    } catch (\Exeption $e) {
-        return back()
-        ->with('Error', 'No se puedo enviar el recibo.')
-        ->withInput();
-    }
-    }
 
-        private function redirectToWhatsApp(Cobros $cobro)
-        {
-          $cliente = $cobro->Cliente ?? Cliente::find($cobro->cliente_id);
+        // 2. Generar PDF y enviar email
+        try {
+            if (view()->exists('cobros.pdf')) {
+                $pdf = Pdf::loadView('cobros.pdf', compact('cobro'));
+                $nombreArchivo = 'recibo_' . $cobro->id . '.pdf';
+                Storage::disk('public')->put('recibos/' . $nombreArchivo, $pdf->output());
+                $rutaFisicaPdf = Storage::disk('public')->path('recibos/' . $nombreArchivo);
 
-          if (!$cliente){
-            return redirect()->back()->with('Error', 'No se encontro el cliente asociado.');
-          }
-
-          $receiptUrl = route('recibo.publico', ['token' => $cobro->receipt_token]);
-          $message = "Hola {$cliente->nombre}, confirmamos tu recepcion de pago por $" . number_format($cobro->cantidad, 2).". Puedes ver tu comprobante aqui: {$receiptUrl}";
-
-          $telefono = preg_replace('/[^0-9]/', '', $cliente->telefono);
-
-          $WhatsAppUrl = "https://wa.me/{$telefono}?text=" . Urlencode($message);
-
-          return redirect()->away($WhatsAppUrl);
+                if (config('mail.default') !== 'array' && config('mail.mailers.smtp.host')) {
+                    $emailAdmin = env('ADMIN_EMAIL', 'admin@admin.com');
+                    Mail::to($emailAdmin)->send(new NotificacionCobroAdmin($cobro, $rutaFisicaPdf));
+                }
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Error al procesar PDF/Email: " . $e->getMessage());
         }
 
-        public function showPublicReceipt($token)
-        {
-            $cobro = Cobros::where('receipt_token', $token)
-            ->with(['cliente', 'empleado'])
-            ->firstOrFail();
-
-            return view('recibos.show', compact('cobro'));
+        // 3. Formatear teléfono para Uruguay (598)
+        $telefonoLimpio = preg_replace('/[^0-9]/', '', $request->telefono);
+        if (str_starts_with($telefonoLimpio, '0')) {
+            $telefonoLimpio = '598' . substr($telefonoLimpio, 1);
         }
 
+        $estadoManoObra = ($request->mano_de_obra === 'si')
+            ? "Realizada"
+            : "No realizada (" . ($request->motivo_no_realizado ?? 'N/A') . ")";
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Cobros $cobros)
-    {
-        //
+        // Fecha en formato local de Uruguay para el ticket
+        $fechaLocal = $cobro->created_at->timezone('America/Montevideo')->format('d/m/Y H:i');
+
+        // 4. Formato Ticket de Pago para WhatsApp
+        $ticketTexto = "==========================\n"
+                     . "       *RECIBO DE PAGO*       \n"
+                     . "==========================\n"
+                     . "*N° Comprobante:* #" . str_pad($cobro->id, 6, '0', STR_PAD_LEFT) . "\n"
+                     . "*Fecha:* " . $fechaLocal . "\n\n"
+                     . "*Cliente:* " . $request->nombre_cliente . "\n"
+                     . "*Concepto:* " . $request->concepto . "\n"
+                     . "*Mano de Obra:* " . $estadoManoObra . "\n"
+                     . "--------------------------\n"
+                     . "*MONTO TOTAL:* $" . number_format($request->monto, 2) . "\n"
+                     . "==========================\n\n"
+                     . "¡Muchas gracias por su preferencia!";
+
+        $urlWhatsapp = "https://api.whatsapp.com/send?phone=" . $telefonoLimpio . "&text=" . urlencode($ticketTexto);
+
+        return redirect()->away($urlWhatsapp);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Cobros $cobros)
+    public function adminmenu()
     {
-        //
-    }
+        $now = Carbon::now('America/Montevideo');
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateCobrosRequest $request, Cobros $cobros)
-    {
-        //
-    }
+        // Totales calculados
+        $ventasHoy = Cobros::whereDate('created_at', $now->toDateString())->sum('monto');
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Cobros $cobros)
-    {
-        //
+        $ventasSemana = Cobros::whereBetween('created_at', [
+            $now->copy()->startOfWeek(),
+            $now->copy()->endOfWeek()
+        ])->sum('monto');
+
+        $ventasMes = Cobros::whereMonth('created_at', $now->month)
+                            ->whereYear('created_at', $now->year)
+                            ->sum('monto');
+
+        // Construcción de días de la semana actual (Lunes a Domingo)
+        $dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+        $totalesPorDia = [];
+        $inicioSemana = $now->copy()->startOfWeek();
+
+        for ($i = 0; $i < 7; $i++) {
+            $fechaDia = $inicioSemana->copy()->addDays($i);
+            $totalesPorDia[] = (float) Cobros::whereDate('created_at', $fechaDia->toDateString())->sum('monto');
+        }
+
+        return view('admin.menu', compact(
+            'ventasHoy',
+            'ventasSemana',
+            'ventasMes',
+            'dias',
+            'totalesPorDia'
+        ));
     }
 }

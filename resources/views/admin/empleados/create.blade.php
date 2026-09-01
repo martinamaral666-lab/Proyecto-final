@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrar Empleado</title>
+    <link rel="stylesheet" href="{{ asset('css/cobro.css') }}">
+    <style>
+        body { background: #009966; font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card-cobro { background: #fff; width: 100%; max-width: 400px; padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,.15); }
+        .card-header h2 { margin: 0 0 20px; color: #0f172a; font-size: 1.4rem; text-align: center; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 6px; color: #334155; font-size: .88rem; font-weight: 600; }
+        .form-control { width: 100%; padding: 10px 12px; background: #f8fafc; border: 1px solid #cbd5e0; border-radius: 8px; font-size: .95rem; box-sizing: border-box; outline: none; }
+        .btn-submit { width: 100%; padding: 12px; background: #009966; color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 10px; }
+        .btn-submit:hover { background: #007a52; }
+        .alert-error { color: #991b1b; background: #fee2e2; border: 1px solid #fca5a5; padding: 10px; margin-bottom: 15px; border-radius: 8px; font-size: .85rem; }
+        .alert-error ul { margin: 0; padding-left: 18px; }
+        .alert-success { color: #065f46; background: #d1fae5; border: 1px solid #6ee7b7; padding: 10px; margin-bottom: 15px; border-radius: 8px; font-size: .85rem; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="card-cobro">
+    <div class="card-header">
+        <h2>Registrar Nuevo Empleado</h2>
+    </div>
+
+    @if ($errors->any())
+        <div class="alert-error">
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    @if(session('success'))
+        <div class="alert-success">{{ session('success') }}</div>
+    @endif
+
+    <form action="{{ route('admin.empleados.store') }}" method="POST" class="form-cobro">
+        @csrf
+        <div class="form-group">
+            <label for="name">Nombre Completo</label>
+            <input type="text" id="name" name="name" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Correo Electrónico</label>
+            <input type="email" id="email" name="email" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Contraseña</label>
+            <input type="password" id="password" name="password" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password_confirmation">Confirmar Contraseña</label>
+            <input type="password" id="password_confirmation" name="password_confirmation" class="form-control" required>
+        </div>
+
+        <button type="submit" class="btn-submit">Crear Empleado</button>
+    </form>
+</div>
+
+</body>
+</html>
