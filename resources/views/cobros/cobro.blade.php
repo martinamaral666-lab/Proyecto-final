@@ -29,6 +29,7 @@
                 <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs px-4 py-2 rounded-lg shadow transition-all">
                     Cerrar Sesión
                 </button>
+            </form>
         </div>
 
 <div class="card-cobro">
