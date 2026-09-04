@@ -50,21 +50,20 @@ Route::post('/logout', function (Request $request) {
 })->name('logout');
 
 // Rutas de empleado y admin
-Route::get('/menu/admin', [CobrosController::class, 'adminmenu'])->name('admin.menu');
-
+Route::middleware(['auth', 'admin'])->get('/menu/admin', [CobrosController::class, 'adminmenu'])->name('admin.menu');
 
 // Ruta de Cobros
-Route::get('/crear/cobros', function () {
+Route::middleware(['auth', 'empleado'])->get('/crear/cobros', function () {
     $cobros = Cobros::paginate(10);
     return view('cobros.cobro', compact('cobros'));
 })->name('cobros.cobro');
 
-Route::get('/cobros', function () {
+Route::middleware(['auth', 'admin'])->get('/cobros', function () {
     $cobros = Cobros::paginate(10);
     return view('cobros.index', compact('cobros'));
 })->name('cobros.index');
 
-Route::get('/admin/empleados/crear', function () {
+Route::middleware(['auth', 'admin'])->get('/admin/empleados/crear', function () {
     return view('admin.empleados.create');
 })->name('admin.empleados.create');
 
