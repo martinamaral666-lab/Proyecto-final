@@ -92,7 +92,7 @@
 
                     <div class="cobro-actions">
                         <span class="monto-text">${{ number_format($cobro->monto, 2) }}</span>
-                        <a href="{{ asset('storage/recibos/recibo_' . $cobro->id . '.pdf') }}" target="_blank" class="btn-pdf">Ver PDF</a>
+                        <a href="{{ route('cobros.pdf', $cobro) }}" target="_blank" class="btn-pdf">Ver PDF</a>
                     </div>
                 </div>
             @empty

@@ -1,12 +1,12 @@
 <?php
 
 use App\Http\Controllers\CobrosController;
-use App\Models\User;
 use App\Models\Cobros;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('auth.login');
@@ -55,13 +55,18 @@ Route::middleware(['auth', 'admin'])->get('/menu/admin', [CobrosController::clas
 // Ruta de Cobros
 Route::middleware(['auth', 'empleado'])->get('/crear/cobros', function () {
     $cobros = Cobros::paginate(10);
+
     return view('cobros.cobro', compact('cobros'));
 })->name('cobros.cobro');
 
 Route::middleware(['auth', 'admin'])->get('/cobros', function () {
     $cobros = Cobros::paginate(10);
+
     return view('cobros.index', compact('cobros'));
 })->name('cobros.index');
+
+Route::middleware(['auth', 'admin'])->get('/cobros/{cobro}/pdf', [CobrosController::class, 'pdf'])
+    ->name('cobros.pdf');
 
 Route::middleware(['auth', 'admin'])->get('/admin/empleados/crear', function () {
     return view('admin.empleados.create');
@@ -71,18 +76,18 @@ Route::post('/cobro/store', [CobrosController::class, 'store'])->name('cobros.st
 
 // metodo para poder registrar al empleado y que se guarde en la base de datos
 Route::post('/admin/store', function (Request $request) {
- $request->validate([
-        'name'     => 'required|string|max:255',
-        'email'    => 'required|string|email|max:255|unique:users',
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'email' => 'required|string|email|max:255|unique:users',
         'password' => 'required|string|min:6',
- ]);
+    ]);
 
- User::create([
-        'name'     => $request->name,
-        'email'    => trim($request->email),
+    User::create([
+        'name' => $request->name,
+        'email' => trim($request->email),
         'password' => Hash::make($request->password),
-        'rol'      => 'empleado',
- ]);
- return redirect()->route('admin.menu');
-})->name('admin.empleados.store');
+        'rol' => 'empleado',
+    ]);
 
+    return redirect()->route('admin.menu');
+})->name('admin.empleados.store');
