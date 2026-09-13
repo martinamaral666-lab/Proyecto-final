@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use App\Notifications\CustomResetPassword;
 
 class User extends Authenticatable implements CanResetPasswordContract
 {
@@ -61,6 +62,10 @@ class User extends Authenticatable implements CanResetPasswordContract
         ];
     }
 
+    public function sendPasswordResetNotification($token): void
+{
+    $this->notify(new CustomResetPassword($token));
+}
 
     public function Cobros()
     {
