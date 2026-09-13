@@ -21,6 +21,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                 </svg>
             </button>
+
             <div class="flex items-center gap-3">
                 <span class="text-xl font-bold text-white tracking-wide">GestiónCash</span>
             </div>
@@ -29,6 +30,7 @@
         <div class="flex items-center gap-6">
             <form method="POST" action="{{ route('logout') }}" class="inline">
                 @csrf
+
                 <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs px-4 py-2 rounded-lg shadow transition-all">
                     Cerrar Sesión
                 </button>
@@ -40,79 +42,145 @@
 
         <!-- BARRA LATERAL (SIDEBAR) -->
         <aside id="sidebar" class="w-64 bg-[#044e39] text-white p-5 flex flex-col shrink-0 transition-sidebar z-20">
-            <h2 class="text-xs font-bold text-emerald-300/70 uppercase tracking-wider mb-4">Acciones Principales</h2>
+
+            <h2 class="text-xs font-bold text-emerald-300/70 uppercase tracking-wider mb-4">
+                Acciones Principales
+            </h2>
 
             <nav class="space-y-3">
+
                 <button id="btnToggleReportes" class="w-full text-left p-3.5 bg-emerald-800/40 hover:bg-emerald-700/50 rounded-xl border border-emerald-600/30 transition-all flex flex-col group focus:outline-none">
-                    <span class="font-bold text-sm text-white group-hover:text-emerald-200">Ver Ventas y Reportes</span>
-                    <span class="text-xs text-emerald-300/80 mt-0.5">Totales y gráfico de ingresos</span>
+                    <span class="font-bold text-sm text-white group-hover:text-emerald-200">
+                        Ver Ventas y Reportes
+                    </span>
+
+                    <span class="text-xs text-emerald-300/80 mt-0.5">
+                        Totales y gráfico de ingresos
+                    </span>
                 </button>
 
                 <a href="{{ route('cobros.index') }}" class="block p-3.5 bg-emerald-900/30 hover:bg-emerald-800/40 rounded-xl border border-emerald-700/30 transition-all group">
-                    <span class="font-bold text-sm text-white group-hover:text-emerald-200">Cobros</span>
-                    <span class="block text-xs text-emerald-300/80 mt-0.5">Información detallada de cobros</span>
+                    <span class="font-bold text-sm text-white group-hover:text-emerald-200">
+                        Cobros
+                    </span>
+
+                    <span class="block text-xs text-emerald-300/80 mt-0.5">
+                        Información detallada de cobros
+                    </span>
                 </a>
 
                 <a href="#" class="block p-3.5 bg-emerald-900/30 hover:bg-emerald-800/40 rounded-xl border border-emerald-700/30 transition-all group">
-                    <span class="font-bold text-sm text-white group-hover:text-emerald-200">Clientes</span>
-                    <span class="block text-xs text-emerald-300/80 mt-0.5">Información de cada cliente</span>
+                    <span class="font-bold text-sm text-white group-hover:text-emerald-200">
+                        Clientes
+                    </span>
+
+                    <span class="block text-xs text-emerald-300/80 mt-0.5">
+                        Información de cada cliente
+                    </span>
                 </a>
 
                 <a href="{{ route('admin.empleados.create') }}" class="block p-3.5 bg-emerald-900/30 hover:bg-emerald-800/40 rounded-xl border border-emerald-700/30 transition-all group">
-                    <span class="font-bold text-sm text-white group-hover:text-emerald-200">Registrar Empleado</span>
-                    <span class="block text-xs text-emerald-300/80 mt-0.5">Crear accesos para personal</span>
+                    <span class="font-bold text-sm text-white group-hover:text-emerald-200">
+                        Registrar Empleado
+                    </span>
+
+                    <span class="block text-xs text-emerald-300/80 mt-0.5">
+                        Crear accesos para personal
+                    </span>
                 </a>
+
+                <!-- MI CUENTA -->
+                <a href="{{ route('admin.cuenta') }}" class="block p-3.5 bg-emerald-900/30 hover:bg-emerald-800/40 rounded-xl border border-emerald-700/30 transition-all group">
+                    <span class="font-bold text-sm text-white group-hover:text-emerald-200">
+                        Mi Cuenta
+                    </span>
+
+                    <span class="block text-xs text-emerald-300/80 mt-0.5">
+                        Configurar datos de la cuenta
+                    </span>
+                </a>
+
             </nav>
         </aside>
 
         <!-- CONTENIDO PRINCIPAL -->
         <main class="flex-1 p-8 overflow-y-auto">
+
             <div class="max-w-6xl mx-auto space-y-8">
 
                 <!-- SECCIÓN REPORTES Y GRÁFICOS (Oculta por defecto) -->
                 <div id="seccionReportes" class="space-y-8 transition-all" style="display: none;">
+
                     <!-- TARJETAS DE MÉTRICAS -->
                     <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
                         <div class="bg-emerald-50 border border-emerald-200 p-6 rounded-2xl shadow-sm">
-                            <span class="text-xs font-bold text-emerald-700 uppercase tracking-wide">Ventas Hoy</span>
-                            <span class="block text-2xl font-black text-emerald-900 mt-1">${{ number_format($ventasHoy ?? 0, 2) }}</span>
+                            <span class="text-xs font-bold text-emerald-700 uppercase tracking-wide">
+                                Ventas Hoy
+                            </span>
+
+                            <span class="block text-2xl font-black text-emerald-900 mt-1">
+                                ${{ number_format($ventasHoy ?? 0, 2) }}
+                            </span>
                         </div>
 
                         <div class="bg-blue-50 border border-blue-200 p-6 rounded-2xl shadow-sm">
-                            <span class="text-xs font-bold text-blue-700 uppercase tracking-wide">Esta Semana</span>
-                            <span class="block text-2xl font-black text-blue-900 mt-1">${{ number_format($ventasSemana ?? 0, 2) }}</span>
+                            <span class="text-xs font-bold text-blue-700 uppercase tracking-wide">
+                                Esta Semana
+                            </span>
+
+                            <span class="block text-2xl font-black text-blue-900 mt-1">
+                                ${{ number_format($ventasSemana ?? 0, 2) }}
+                            </span>
                         </div>
 
                         <div class="bg-purple-50 border border-purple-200 p-6 rounded-2xl shadow-sm">
-                            <span class="text-xs font-bold text-purple-700 uppercase tracking-wide">Este Mes</span>
-                            <span class="block text-2xl font-black text-purple-900 mt-1">${{ number_format($ventasMes ?? 0, 2) }}</span>
+                            <span class="text-xs font-bold text-purple-700 uppercase tracking-wide">
+                                Este Mes
+                            </span>
+
+                            <span class="block text-2xl font-black text-purple-900 mt-1">
+                                ${{ number_format($ventasMes ?? 0, 2) }}
+                            </span>
                         </div>
+
                     </section>
 
-                    <!-- GRÁFICO CON ALTURA EXPLÍCITA -->
+                    <!-- GRÁFICO -->
                     <section class="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
-                        <h3 class="text-base font-bold text-slate-800 mb-4">Rendimiento Semanal</h3>
+
+                        <h3 class="text-base font-bold text-slate-800 mb-4">
+                            Rendimiento Semanal
+                        </h3>
+
                         <div style="position: relative; height: 300px; width: 100%;">
                             <canvas id="graficoVentas"></canvas>
                         </div>
+
                     </section>
+
                 </div>
 
             </div>
+
         </main>
+
     </div>
 
     <!-- JAVASCRIPT -->
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+
             // 1. Sidebar toggle
             const btnToggleSidebar = document.getElementById('btnToggleSidebar');
             const sidebar = document.getElementById('sidebar');
 
             if (btnToggleSidebar && sidebar) {
+
                 btnToggleSidebar.addEventListener('click', function () {
                     sidebar.classList.toggle('-ml-64');
                 });
+
             }
 
             // 2. Inicialización de Chart.js
@@ -120,33 +188,53 @@
             const canvas = document.getElementById('graficoVentas');
 
             function crearGrafico() {
+
                 if (!canvas || miGrafico) return;
 
                 const ctx = canvas.getContext('2d');
+
                 miGrafico = new Chart(ctx, {
+
                     type: 'bar',
+
                     data: {
                         labels: {!! json_encode($dias ?? ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']) !!},
+
                         datasets: [{
                             label: 'Ventas ($)',
+
                             data: {!! json_encode($totalesPorDia ?? [0, 0, 0, 0, 0, 0, 0]) !!},
+
                             backgroundColor: '#044e39',
+
                             borderRadius: 8
                         }]
                     },
+
                     options: {
+
                         responsive: true,
+
                         maintainAspectRatio: false,
+
                         scales: {
+
                             y: {
                                 beginAtZero: true,
+
                                 ticks: {
-                                    callback: function(value) { return '$' + value; }
+                                    callback: function(value) {
+                                        return '$' + value;
+                                    }
                                 }
                             }
+
                         }
+
                     }
+
                 });
+
             }
 
             // 3. Mostrar/Ocultar Reportes y refrescar gráfico
@@ -154,25 +242,40 @@
             const seccionReportes = document.getElementById('seccionReportes');
 
             if (btnToggleReportes && seccionReportes) {
+
                 btnToggleReportes.addEventListener('click', function () {
-                    if (seccionReportes.style.display === 'none' || seccionReportes.style.display === '') {
+
+                    if (
+                        seccionReportes.style.display === 'none' ||
+                        seccionReportes.style.display === ''
+                    ) {
+
                         seccionReportes.style.display = 'block';
 
                         // Creamos el gráfico o lo redimensionamos justo al abrirse la sección
                         setTimeout(() => {
+
                             if (!miGrafico) {
                                 crearGrafico();
                             } else {
                                 miGrafico.resize();
                                 miGrafico.update();
                             }
+
                         }, 50);
+
                     } else {
+
                         seccionReportes.style.display = 'none';
+
                     }
+
                 });
+
             }
+
         });
     </script>
+
 </body>
 </html>
