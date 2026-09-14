@@ -11,6 +11,16 @@
         body { background: #009966; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px 0; position: relative; }
         .card-cobro { background: #fff; padding: 30px; border-radius: 16px; width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,.15); }
         .card-header { text-align: center; margin-bottom: 20px; }
+        .card-header img {
+            display: block;
+            width: 84px;
+            height: 84px;
+            object-fit: contain;
+            margin: 0 auto 12px;
+            background: #ecfdf5;
+            border-radius: 18px;
+            padding: 10px;
+        }
         .card-header h2 { color: #0f172a; font-size: 1.4rem; margin-bottom: 4px; }
         .form-group { margin-bottom: 15px; display: flex; flex-direction: column; }
         .form-group label { font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #334155; }
@@ -34,6 +44,7 @@
 
 <div class="card-cobro">
     <div class="card-header">
+        <img src="{{ asset('imagenes/logo listo 3.png') }}" alt="Logo GestiónCash">
         <h2>Registrar Cobro</h2>
     </div>
 

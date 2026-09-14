@@ -42,12 +42,14 @@
     <nav class="navbar">
         <div class="navbar-brand">
             <a href="{{ route('admin.menu') }}" class="btn-back">← Volver</a>
+            <img src="{{ asset('imagenes/logo listo 3.png') }}" alt="Logo GestiónCash" style="width: 38px; height: 38px; object-fit: contain; border-radius: 10px; background: rgba(255,255,255,0.08); padding: 4px;">
             <span class="brand-title">GestiónCash</span>
         </div>
     </nav>
 
 <div class="card-cobro">
     <div class="card-header">
+        <img src="{{ asset('imagenes/logo listo 3.png') }}" alt="Logo GestiónCash" style="display: block; width: 84px; height: 84px; object-fit: contain; margin: 0 auto 12px; background: #ecfdf5; border-radius: 18px; padding: 10px;">
         <h2>Registrar Nuevo Empleado</h2>
     </div>
 

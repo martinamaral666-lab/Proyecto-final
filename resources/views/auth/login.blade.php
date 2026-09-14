@@ -35,6 +35,18 @@
             margin-bottom: 32px;
         }
 
+        .login-header img {
+            display: block;
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            margin: 0 auto 14px;
+            background: #ecfdf5;
+            border-radius: 18px;
+            padding: 10px;
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.12);
+        }
+
         .login-header h1 {
             color: #0f172a;
             font-size: 26px;
@@ -101,6 +113,7 @@
 
     <div class="login-card">
         <div class="login-header">
+            <img src="{{ asset('imagenes/logo listo 3.png') }}" alt="Logo GestiónCash">
             <h1>Iniciar Sesión</h1>
 
         </div>

@@ -11,6 +11,7 @@
     <div class="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden">
         <!-- HEADER -->
         <div class="bg-emerald-800 text-white p-6 text-center">
+            <img src="{{ asset('imagenes/logo listo 3.png') }}" alt="Logo GestiónCash" class="w-16 h-16 object-contain mx-auto mb-3 rounded-xl bg-white/10 p-2">
             <h1 class="text-xl font-bold">Registrar Cobro</h1>
             <p class="text-xs text-emerald-100 mt-1">Ingresa los datos del pago recibido</p>
         </div>
