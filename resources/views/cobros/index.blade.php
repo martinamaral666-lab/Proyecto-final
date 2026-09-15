@@ -61,6 +61,7 @@
     <nav class="navbar">
         <div class="navbar-brand">
             <a href="{{ route('admin.menu') }}" class="btn-back">← Volver</a>
+            <img src="{{ asset('imagenes/logo listo 3.png') }}" alt="Logo GestiónCash" style="width: 38px; height: 38px; object-fit: contain; border-radius: 10px; background: rgba(255,255,255,0.08); padding: 4px;">
             <span class="brand-title">GestiónCash</span>
         </div>
     </nav>
@@ -92,7 +93,7 @@
 
                     <div class="cobro-actions">
                         <span class="monto-text">${{ number_format($cobro->monto, 2) }}</span>
-                        <a href="{{ asset('storage/recibos/recibo_' . $cobro->id . '.pdf') }}" target="_blank" class="btn-pdf">Ver PDF</a>
+                        <a href="{{ route('cobros.pdf', $cobro) }}" target="_blank" class="btn-pdf">Ver PDF</a>
                     </div>
                 </div>
             @empty

@@ -6,6 +6,7 @@
     <title>Registrar Empleado</title>
     <link rel="stylesheet" href="{{ asset('css/cobro.css') }}">
     <style>
+
         body { background: #009966; font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         .card-cobro { background: #fff; width: 100%; max-width: 400px; padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,.15); }
         .card-header h2 { margin: 0 0 20px; color: #0f172a; font-size: 1.4rem; text-align: center; }
@@ -17,12 +18,38 @@
         .alert-error { color: #991b1b; background: #fee2e2; border: 1px solid #fca5a5; padding: 10px; margin-bottom: 15px; border-radius: 8px; font-size: .85rem; }
         .alert-error ul { margin: 0; padding-left: 18px; }
         .alert-success { color: #065f46; background: #d1fae5; border: 1px solid #6ee7b7; padding: 10px; margin-bottom: 15px; border-radius: 8px; font-size: .85rem; text-align: center; }
+
+        .navbar {
+            position:absolute;
+            top: 0;
+            width: 100%;
+            height: 40px;
+            color: #fff;
+            padding: 15px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .navbar-brand { display: flex; align-items: center; gap: 12px; }
+        .btn-back { background: rgba(255, 255, 255, 0.15); color: #fff; text-decoration: none; padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; font-weight: 600; display: inline-flex; align-items: center; }
+        .btn-back:hover { background: rgba(255, 255, 255, 0.25); }
+        .brand-title { font-size: 1.25rem; font-weight: 700; }
+
     </style>
 </head>
 <body>
 
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <a href="{{ route('admin.menu') }}" class="btn-back">← Volver</a>
+            <img src="{{ asset('imagenes/logo listo 3.png') }}" alt="Logo GestiónCash" style="width: 38px; height: 38px; object-fit: contain; border-radius: 10px; background: rgba(255,255,255,0.08); padding: 4px;">
+            <span class="brand-title">GestiónCash</span>
+        </div>
+    </nav>
+
 <div class="card-cobro">
     <div class="card-header">
+        <img src="{{ asset('imagenes/logo listo 3.png') }}" alt="Logo GestiónCash" style="display: block; width: 84px; height: 84px; object-fit: contain; margin: 0 auto 12px; background: #ecfdf5; border-radius: 18px; padding: 10px;">
         <h2>Registrar Nuevo Empleado</h2>
     </div>
 

@@ -1,12 +1,12 @@
 <?php
 
 use App\Http\Controllers\CobrosController;
-use App\Http\Controllers\InventarioController;
-use App\Models\User;
 use App\Models\Cobros;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('auth.login');
@@ -50,22 +50,25 @@ Route::post('/logout', function (Request $request) {
 })->name('logout');
 
 // Rutas de empleado y admin
-Route::get('/menu/admin', [CobrosController::class, 'adminmenu'])->name('admin.menu');
-
+Route::middleware(['auth', 'admin'])->get('/menu/admin', [CobrosController::class, 'adminmenu'])->name('admin.menu');
 
 // Ruta de Cobros
-
-Route::get('/crear/cobros', function () {
+Route::middleware(['auth', 'empleado'])->get('/crear/cobros', function () {
     $cobros = Cobros::paginate(10);
+
     return view('cobros.cobro', compact('cobros'));
 })->name('cobros.cobro');
 
-Route::get('/cobros', function () {
+Route::middleware(['auth', 'admin'])->get('/cobros', function () {
     $cobros = Cobros::paginate(10);
+
     return view('cobros.index', compact('cobros'));
 })->name('cobros.index');
 
-Route::get('/admin/empleados/crear', function () {
+Route::middleware(['auth', 'admin'])->get('/cobros/{cobro}/pdf', [CobrosController::class, 'pdf'])
+    ->name('cobros.pdf');
+
+Route::middleware(['auth', 'admin'])->get('/admin/empleados/crear', function () {
     return view('admin.empleados.create');
 })->name('admin.empleados.create');
 
@@ -73,20 +76,18 @@ Route::post('/cobro/store', [CobrosController::class, 'store'])->name('cobros.st
 
 // metodo para poder registrar al empleado y que se guarde en la base de datos
 Route::post('/admin/store', function (Request $request) {
- $request->validate([
-        'name'     => 'required|string|max:255',
-        'email'    => 'required|string|email|max:255|unique:users',
+    $request->validate([
+        'name' => 'required|string|max:255',
+        'email' => 'required|string|email|max:255|unique:users',
         'password' => 'required|string|min:6',
- ]);
+    ]);
 
- User::create([
-        'name'     => $request->name,
-        'email'    => trim($request->email),
+    User::create([
+        'name' => $request->name,
+        'email' => trim($request->email),
         'password' => Hash::make($request->password),
-        'rol'      => 'empleado',
- ]);
- return redirect()->route('admin.menu');
-})->name('admin.empleados.store');
+        'rol' => 'empleado',
+    ]);
 
 //Rutas del inventario
 
@@ -105,4 +106,3 @@ Route::get('/menu/admin/inventario', [InventarioController::class, 'index'])->na
 Route::post('/menu/admin/inventario', [InventarioController::class, 'store'])->name('inventario.store');
 
 Route::delete('/menu/admin/inventario/{id}', [InventarioController::class, 'destroy'])->name('inventario.destroy');
-

@@ -21,6 +21,7 @@
                 </svg>
             </button>
             <div class="flex items-center gap-3">
+                <img src="{{ asset('imagenes/logo listo 3.png') }}" alt="Logo GestiónCash" class="w-10 h-10 object-contain rounded-lg bg-white/10 p-1 shadow-sm">
                 <span class="text-xl font-bold text-white tracking-wide">GestiónCash</span>
             </div>
         </div>
