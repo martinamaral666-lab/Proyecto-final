@@ -2,43 +2,57 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
+use Illuminate\Auth\Passwords\CanResetPassword;
+use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use App\Notifications\CustomResetPassword;
 
-/**
- * @property int $id
- * @property string $name
- * @property string $email
- * @property Carbon|null $email_verified_at
- * @property string $password
- * @property string|null $remember_token
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- */
-#[Fillable(['name', 'email', 'password', 'rol'])]
-#[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements CanResetPasswordContract
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, CanResetPassword;
+
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * @property int $id
+     * @property string $name
+     * @property string $email
+     * @property string|null $telefono
+     * @property Carbon|null $email_verified_at
+     * @property string $password
+     * @property string|null $remember_token
+     * @property Carbon|null $created_at
+     * @property Carbon|null $updated_at
      */
+
+
+    #[Fillable([
+        'name',
+        'email',
+        'password',
+        'rol',
+        'telefono'
+    ])]
+
+    #[Hidden([
+        'password',
+        'remember_token'
+    ])]
+
+
     protected $fillable = [
-    'name',
-    'email',
-    'password',
-    'rol',
-];
+        'name',
+        'email',
+        'password',
+        'rol',
+        'telefono',
+    ];
+
 
     protected function casts(): array
     {
@@ -48,9 +62,13 @@ class User extends Authenticatable
         ];
     }
 
+    public function sendPasswordResetNotification($token): void
+{
+    $this->notify(new CustomResetPassword($token));
+}
+
     public function Cobros()
     {
         return $this->hasMany(Cobros::class, 'User_id');
     }
-
 }

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Registrar Cobro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -31,6 +32,7 @@
 
 
 </head>
+
 <body>
 
 <div class="flex items-center gap-6">
@@ -61,42 +63,374 @@
     <form action="{{ route('cobros.store') }}" method="POST">
         @csrf
 
-        <div class="form-group">
-            <label for="nombre_cliente">Nombre del Cliente</label>
-            <input type="text" id="nombre_cliente" name="nombre_cliente" class="form-control" required>
-        </div>
-
-        <div class="form-group">
-            <label for="telefono">Teléfono (WhatsApp)</label>
-            <input type="text" id="telefono" name="telefono" class="form-control" placeholder="099123456" required>
-        </div>
-
-        <div class="form-group">
-            <label for="concepto">Concepto / Descripción</label>
-            <input type="text" id="concepto" name="concepto" class="form-control" required>
-        </div>
-
-        <div class="form-group">
-            <label for="monto">Monto / Cantidad ($)</label>
-            <input type="number" id="monto" name="monto" class="form-control" step="0.01" min="0" placeholder="0.00" required>
-        </div>
-
-        <div class="form-group">
-            <label for="mano_de_obra">¿Se realizó la mano de obra?</label>
-            <select id="mano_de_obra" name="mano_de_obra" class="form-control" required>
-                <option value="si">Sí</option>
-                <option value="no">No</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label for="motivo_no_realizado">Motivo (si fue "No")</label>
-            <input type="text" id="motivo_no_realizado" name="motivo_no_realizado" class="form-control">
-        </div>
-
-        <button type="submit" class="btn-submit">Guardar y Generar Recibo</button>
+        <button
+            type="submit"
+            class="bg-red-600 hover:bg-red-700 text-white font-semibold text-xs px-4 py-2 rounded-lg shadow transition-all"
+        >
+            Cerrar Sesión
+        </button>
     </form>
-</div>
+
+
+    <!-- TARJETA -->
+    <div class="card-cobro">
+
+        <div class="card-header">
+            <h2>Registrar Cobro</h2>
+        </div>
+
+
+        <!-- ERRORES -->
+        @if ($errors->any())
+            <div class="alert-error">
+                <ul>
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+
+        <form action="{{ route('cobros.store') }}" method="POST">
+
+            @csrf
+
+
+            <!-- TIPO DE REGISTRO -->
+            <div class="form-group">
+
+                <label>
+                    ¿Qué deseas registrar?
+                </label>
+
+                <div class="tipo-registro">
+
+                    <!-- VENTA EN CAJA -->
+                    <div class="tipo-opcion">
+
+                        <input
+                            type="radio"
+                            id="venta_caja"
+                            name="tipo_registro"
+                            value="venta"
+                            checked
+                        >
+
+                        <label for="venta_caja">
+                            🛒 Venta en caja
+                        </label>
+
+                    </div>
+
+
+                    <!-- MANO DE OBRA -->
+                    <div class="tipo-opcion">
+
+                        <input
+                            type="radio"
+                            id="mano_obra"
+                            name="tipo_registro"
+                            value="mano_obra"
+                        >
+
+                        <label for="mano_obra">
+                            🧰 Mano de obra
+                        </label>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- DATOS DEL CLIENTE -->
+
+            <div class="seccion-titulo">
+                Datos del cliente
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="nombre_cliente">
+                    Nombre del Cliente
+                </label>
+
+                <input
+                    type="text"
+                    id="nombre_cliente"
+                    name="nombre_cliente"
+                    class="form-control"
+                    required
+                >
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="telefono">
+                    Teléfono (WhatsApp)
+                </label>
+
+                <input
+                    type="text"
+                    id="telefono"
+                    name="telefono"
+                    class="form-control"
+                    placeholder="099123456"
+                    required
+                >
+
+            </div>
+
+
+            <!-- DATOS DEL COBRO -->
+
+            <div class="seccion-titulo">
+                Datos del cobro
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="concepto">
+                    Concepto / Descripción
+                </label>
+
+                <input
+                    type="text"
+                    id="concepto"
+                    name="concepto"
+                    class="form-control"
+                    placeholder="Ej: Materiales eléctricos"
+                    required
+                >
+
+            </div>
+
+
+            <div class="form-group">
+
+                <label for="monto">
+                    Monto ($)
+                </label>
+
+                <input
+                    type="number"
+                    id="monto"
+                    name="monto"
+                    class="form-control"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    required
+                >
+
+            </div>
+
+
+            <!-- SECCIÓN MANO DE OBRA -->
+
+            <div id="seccion-mano-obra" class="oculto">
+
+                <div class="seccion-titulo">
+                    Datos de la mano de obra
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="mano_de_obra">
+                        ¿Se realizó la mano de obra?
+                    </label>
+
+                    <select
+                        id="mano_de_obra"
+                        name="mano_de_obra"
+                        class="form-control"
+                    >
+
+                        <option value="si">
+                            Sí
+                        </option>
+
+                        <option value="no">
+                            No
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <div
+                    class="form-group oculto"
+                    id="grupo-motivo"
+                >
+
+                    <label for="motivo_no_realizado">
+                        Motivo por el que no se realizó
+                    </label>
+
+                    <input
+                        type="text"
+                        id="motivo_no_realizado"
+                        name="motivo_no_realizado"
+                        class="form-control"
+                        placeholder="Ingresá el motivo"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <!-- BOTÓN -->
+
+            <button
+                type="submit"
+                class="btn-submit"
+            >
+                Guardar y Generar Recibo
+            </button>
+
+        </form>
+
+    </div>
+
+
+    <!-- JAVASCRIPT -->
+
+    <script>
+
+        const ventaCaja = document.getElementById('venta_caja');
+
+        const manoObra = document.getElementById('mano_obra');
+
+        const seccionManoObra =
+            document.getElementById('seccion-mano-obra');
+
+        const selectManoObra =
+            document.getElementById('mano_de_obra');
+
+        const grupoMotivo =
+            document.getElementById('grupo-motivo');
+
+        const motivoNoRealizado =
+            document.getElementById('motivo_no_realizado');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | CAMBIAR ENTRE VENTA EN CAJA Y MANO DE OBRA
+        |--------------------------------------------------------------------------
+        */
+
+        function actualizarTipoRegistro() {
+
+            if (manoObra.checked) {
+
+                seccionManoObra.classList.remove('oculto');
+
+                selectManoObra.required = true;
+
+            } else {
+
+                seccionManoObra.classList.add('oculto');
+
+                selectManoObra.required = false;
+
+                grupoMotivo.classList.add('oculto');
+
+                motivoNoRealizado.required = false;
+
+            }
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | MOSTRAR MOTIVO SI NO SE REALIZÓ LA MANO DE OBRA
+        |--------------------------------------------------------------------------
+        */
+
+        function actualizarMotivo() {
+
+            if (
+                manoObra.checked &&
+                selectManoObra.value === 'no'
+            ) {
+
+                grupoMotivo.classList.remove('oculto');
+
+                motivoNoRealizado.required = true;
+
+            } else {
+
+                grupoMotivo.classList.add('oculto');
+
+                motivoNoRealizado.required = false;
+
+                motivoNoRealizado.value = '';
+
+            }
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | EVENTOS
+        |--------------------------------------------------------------------------
+        */
+
+        ventaCaja.addEventListener(
+            'change',
+            function () {
+
+                actualizarTipoRegistro();
+
+            }
+        );
+
+
+        manoObra.addEventListener(
+            'change',
+            function () {
+
+                actualizarTipoRegistro();
+
+                actualizarMotivo();
+
+            }
+        );
+
+
+        selectManoObra.addEventListener(
+            'change',
+            function () {
+
+                actualizarMotivo();
+
+            }
+        );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ESTADO INICIAL
+        |--------------------------------------------------------------------------
+        */
+
+        actualizarTipoRegistro();
+
+        actualizarMotivo();
+
+    </script>
 
 </body>
 </html>
