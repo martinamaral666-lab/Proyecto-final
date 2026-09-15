@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CobrosController;
+use App\Http\Controllers\InventarioController;
 use App\Models\User;
 use App\Models\Cobros;
 use Illuminate\Http\Request;
@@ -53,35 +54,7 @@ Route::get('/menu/admin', [CobrosController::class, 'adminmenu'])->name('admin.m
 
 
 // Ruta de Cobros
-Route::get('/cobros', function () {
-    $cobros = Cobros::paginate(10);
-    return view('cobros.index', compact('cobros'));
-})->name('cobros.index');
 
-Route::get('/admin/empleados/crear', function () {
-    return view('admin.empleados.create');
-})->name('admin.empleados.create');
-
-Route::post('/cobro/store', [CobrosController::class, 'store'])->name('cobros.store');
-
-// metodo para poder registrar al empleado y que se guarde en la base de datos
-Route::post('/admin/store', function (Request $request) {
- $request->validate([
-        'name'     => 'required|string|max:255',
-        'email'    => 'required|string|email|max:255|unique:users',
-        'password' => 'required|string|min:6',
- ]);
-
- User::create([
-        'name'     => $request->name,
-        'email'    => trim($request->email),
-        'password' => Hash::make($request->password),
-        'rol'      => 'empleado',
- ]);
- return redirect()->route('admin.menu');
-})->name('admin.empleados.store');
-
-// Ruta de Cobros
 Route::get('/crear/cobros', function () {
     $cobros = Cobros::paginate(10);
     return view('cobros.cobro', compact('cobros'));
@@ -114,4 +87,22 @@ Route::post('/admin/store', function (Request $request) {
  ]);
  return redirect()->route('admin.menu');
 })->name('admin.empleados.store');
+
+//Rutas del inventario
+
+Route::get('/inventario/crear', function () {
+    return view('admin.inventario');
+})->name('inventario.crear');
+
+Route::get('/inventario/editar', function () {
+    Return view('admin.inventario');
+})->name('inventario.editar');
+
+Route::patch('/menu/admin/inventario/{id}/uso', [InventarioController::class, 'uso'])->name('inventario.uso');
+
+Route::get('/menu/admin/inventario', [InventarioController::class, 'index'])->name('inventario.index');
+
+Route::post('/menu/admin/inventario', [InventarioController::class, 'store'])->name('inventario.store');
+
+Route::delete('/menu/admin/inventario/{id}', [InventarioController::class, 'destroy'])->name('inventario.destroy');
 

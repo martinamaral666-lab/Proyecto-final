@@ -16,8 +16,11 @@
         .btn-submit { width: 100%; padding: 12px; background: #009966; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; margin-top: 10px; }
         .alert-error { background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem; }
     </style>
+
+
 </head>
 <body>
+
 
 <div class="card-cobro">
     <div class="card-header">

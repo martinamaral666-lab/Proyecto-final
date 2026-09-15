@@ -40,7 +40,7 @@ class CobrosController extends Controller
             'motivo_no_realizado' => 'nullable|required_if:mano_de_obra,no|string|max:255',
         ]);
 
-        // 1. Guardar en la Base de Datos
+        //  Guarda los datos en la Base de Datos
         $cobro = Cobros::create([
             'nombre_cliente'      => $request->nombre_cliente,
             'telefono'            => $request->telefono,
@@ -50,7 +50,7 @@ class CobrosController extends Controller
             'motivo_no_realizado' => $request->mano_de_obra === 'no' ? $request->motivo_no_realizado : null,
         ]);
 
-        // 2. Generar PDF y enviar email
+        //  Genera el PDF y enviar email
         try {
             if (view()->exists('cobros.pdf')) {
                 $pdf = Pdf::loadView('cobros.pdf', compact('cobro'));
@@ -67,7 +67,7 @@ class CobrosController extends Controller
             \Illuminate\Support\Facades\Log::error("Error al procesar PDF/Email: " . $e->getMessage());
         }
 
-        // 3. Formatear teléfono para Uruguay (598)
+        // Formatear teléfono para Uruguay (598)
         $telefonoLimpio = preg_replace('/[^0-9]/', '', $request->telefono);
         if (str_starts_with($telefonoLimpio, '0')) {
             $telefonoLimpio = '598' . substr($telefonoLimpio, 1);
@@ -80,7 +80,7 @@ class CobrosController extends Controller
         // Fecha en formato local de Uruguay para el ticket
         $fechaLocal = $cobro->created_at->timezone('America/Montevideo')->format('d/m/Y H:i');
 
-        // 4. Formato Ticket de Pago para WhatsApp
+        //  Formato Ticket de Pago para WhatsApp
         $ticketTexto = "==========================\n"
                      . "       *RECIBO DE PAGO*       \n"
                      . "==========================\n"
