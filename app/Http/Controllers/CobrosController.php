@@ -134,10 +134,7 @@ class CobrosController extends Controller
         ));
     }
 }
-<<<<<<< HEAD
 
 
 
 
-=======
->>>>>>> c14ab50 (feat: diseño de registro de empleados y recibos)
