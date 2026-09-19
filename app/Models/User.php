@@ -17,7 +17,6 @@ class User extends Authenticatable implements CanResetPasswordContract
 {
     use HasFactory, Notifiable, CanResetPassword;
 
-
     /**
      * @property int $id
      * @property string $name
@@ -29,7 +28,6 @@ class User extends Authenticatable implements CanResetPasswordContract
      * @property Carbon|null $created_at
      * @property Carbon|null $updated_at
      */
-
 
     #[Fillable([
         'name',
@@ -44,7 +42,6 @@ class User extends Authenticatable implements CanResetPasswordContract
         'remember_token'
     ])]
 
-
     protected $fillable = [
         'name',
         'email',
@@ -52,7 +49,6 @@ class User extends Authenticatable implements CanResetPasswordContract
         'rol',
         'telefono',
     ];
-
 
     protected function casts(): array
     {
@@ -63,12 +59,12 @@ class User extends Authenticatable implements CanResetPasswordContract
     }
 
     public function sendPasswordResetNotification($token): void
-{
-    $this->notify(new CustomResetPassword($token));
-}
-
-    public function Cobros()
     {
-        return $this->hasMany(Cobros::class, 'User_id');
+        $this->notify(new CustomResetPassword($token));
+    }
+
+    public function cobros()
+    {
+        return $this->hasMany(Cobros::class, 'user_id');
     }
 }

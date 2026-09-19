@@ -16,7 +16,10 @@ class Cobros extends Model
         'concepto',
         'monto',
         'mano_de_obra',
-        'motivo_no_realizado',];
+        'motivo_no_realizado',
+        'tipo_registro',
+        'user_id',
+    ];
 
     public function cliente()
     {
@@ -30,6 +33,6 @@ class Cobros extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id');
     }
 }
