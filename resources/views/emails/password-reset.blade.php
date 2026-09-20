@@ -31,7 +31,7 @@
 
             <!-- ENCABEZADO -->
             <div style="
-                background-color: #198754;
+                background-color: #000000;
                 padding: 25px 30px;
                 text-align: center;
             ">
@@ -196,4 +196,3 @@
 
 </body>
 </html>
-
