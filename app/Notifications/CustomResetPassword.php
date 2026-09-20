@@ -3,7 +3,6 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -22,10 +21,9 @@ class CustomResetPassword extends Notification
 
     protected function resetUrl($notifiable): string
     {
-        return url(route('password.reset', [
-            'token' => $this->token,
-            'email' => $notifiable->getEmailForPasswordReset(),
-        ], false));
+        return url('/reset-password/' . $this->token . '?email=' . urlencode(
+            $notifiable->getEmailForPasswordReset()
+        ));
     }
 
     public function toMail(object $notifiable): MailMessage
@@ -42,3 +40,4 @@ class CustomResetPassword extends Notification
             ]);
     }
 }
+

@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class Cobros extends Model
 {
-    /** @use HasFactory<\Database\Factories\CobrosFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -15,6 +14,7 @@ class Cobros extends Model
         'telefono',
         'concepto',
         'monto',
+        'metodo_pago',
         'mano_de_obra',
         'motivo_no_realizado',
         'tipo_registro',
@@ -36,3 +36,4 @@ class Cobros extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 }
+

@@ -23,35 +23,87 @@
             <!-- NOMBRE CLIENTE -->
             <div>
                 <label for="nombre_cliente" class="block text-xs font-bold uppercase text-gray-600 mb-1">Nombre del Cliente</label>
-                <input type="text" name="nombre_cliente" id="nombre_cliente" required placeholder="Ej. Juan Pérez"
-                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600">
+                <input
+                    type="text"
+                    name="nombre_cliente"
+                    id="nombre_cliente"
+                    required
+                    placeholder="Ej. Juan Pérez"
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                >
             </div>
 
             <!-- TELÉFONO -->
             <div>
-              <label for="telefono" class="block text-xs font-bold uppercase text-gray-600 mb-1">Teléfono (WhatsApp)</label>
-              <input type="tel" name="telefono" id="telefono" required placeholder="Ej. 099123456"
-              class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600">
-           </div>
+                <label for="telefono" class="block text-xs font-bold uppercase text-gray-600 mb-1">Teléfono (WhatsApp)</label>
+                <input
+                    type="tel"
+                    name="telefono"
+                    id="telefono"
+                    required
+                    placeholder="Ej. 099123456"
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                >
+            </div>
+
             <!-- CONCEPTO -->
             <div>
                 <label for="concepto" class="block text-xs font-bold uppercase text-gray-600 mb-1">Concepto</label>
-                <input type="text" name="concepto" id="concepto" required placeholder="Ej. Cuota de servicio"
-                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600">
+                <input
+                    type="text"
+                    name="concepto"
+                    id="concepto"
+                    required
+                    placeholder="Ej. Cuota de servicio"
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                >
             </div>
 
             <!-- MONTO -->
             <div>
                 <label for="monto" class="block text-xs font-bold uppercase text-gray-600 mb-1">Monto ($)</label>
-                <input type="number" step="0.01" name="monto" id="monto" required placeholder="0.00"
-                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600">
+                <input
+                    type="number"
+                    step="0.01"
+                    name="monto"
+                    id="monto"
+                    required
+                    placeholder="0.00"
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                >
+            </div>
+
+            <!-- MEDIO DE PAGO -->
+            <div>
+                <label for="metodo_pago" class="block text-xs font-bold uppercase text-gray-600 mb-1">
+                    Medio de pago
+                </label>
+
+                <select
+                    name="metodo_pago"
+                    id="metodo_pago"
+                    required
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                >
+                    <option value="" disabled selected>Seleccioná un medio de pago</option>
+                    <option value="efectivo">💵 Efectivo</option>
+                    <option value="tarjeta">💳 Tarjeta</option>
+                </select>
             </div>
 
             <!-- ¿SE REALIZÓ LA MANO DE OBRA? -->
             <div>
-                <label for="mano_de_obra" class="block text-xs font-bold uppercase text-gray-600 mb-1">¿Se realizó la mano de obra?</label>
-                <select name="mano_de_obra" id="mano_de_obra" onchange="toggleMotivo(this.value)" required
-                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600">
+                <label for="mano_de_obra" class="block text-xs font-bold uppercase text-gray-600 mb-1">
+                    ¿Se realizó la mano de obra?
+                </label>
+
+                <select
+                    name="mano_de_obra"
+                    id="mano_de_obra"
+                    onchange="toggleMotivo(this.value)"
+                    required
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600"
+                >
                     <option value="si" selected>Sí, realizada</option>
                     <option value="no">No realizada</option>
                 </select>
@@ -59,17 +111,32 @@
 
             <!-- MOTIVO POR EL CUAL NO SE REALIZÓ (OCULTO POR DEFECTO) -->
             <div id="campo_motivo" class="hidden">
-                <label for="motivo_no_realizado" class="block text-xs font-bold uppercase text-red-600 mb-1">Motivo por el cual no se realizó</label>
-                <textarea name="motivo_no_realizado" id="motivo_no_realizado" rows="2" placeholder="Explica la razón..."
-                    class="w-full bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-red-500"></textarea>
+                <label for="motivo_no_realizado" class="block text-xs font-bold uppercase text-red-600 mb-1">
+                    Motivo por el cual no se realizó
+                </label>
+
+                <textarea
+                    name="motivo_no_realizado"
+                    id="motivo_no_realizado"
+                    rows="2"
+                    placeholder="Explica la razón..."
+                    class="w-full bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-red-500"
+                ></textarea>
             </div>
 
             <!-- BOTONES -->
             <div class="pt-2 space-y-2">
-                <button type="submit" class="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-bold py-3 rounded-xl transition shadow-md">
+                <button
+                    type="submit"
+                    class="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-bold py-3 rounded-xl transition shadow-md"
+                >
                     Guardar y Generar Recibo
                 </button>
-                <a href="/admin/menu" class="block text-center w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm transition">
+
+                <a
+                    href="/admin/menu"
+                    class="block text-center w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm transition"
+                >
                     Cancelar
                 </a>
             </div>
@@ -81,6 +148,7 @@
     <script>
         function toggleMotivo(valor) {
             const campoMotivo = document.getElementById('campo_motivo');
+
             if (valor === 'no') {
                 campoMotivo.classList.remove('hidden');
             } else {
@@ -91,3 +159,4 @@
 
 </body>
 </html>
+

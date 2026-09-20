@@ -69,6 +69,8 @@ class CobrosController extends Controller
 
             'monto' => 'required|numeric|min:0',
 
+            'metodo_pago' => 'required|in:efectivo,tarjeta',
+
             'mano_de_obra' => [
                 'required_if:tipo_registro,mano_obra',
                 'nullable',
@@ -77,9 +79,10 @@ class CobrosController extends Controller
 
             'motivo_no_realizado' => [
                 'nullable',
-                'required_if:mano_de_obra,no',
                 'string',
                 'max:255',
+                'required_if:tipo_registro,mano_obra',
+                'required_if:mano_de_obra,no',
             ],
         ]);
 
@@ -88,9 +91,17 @@ class CobrosController extends Controller
         | 2. DETERMINAR LOS DATOS DE MANO DE OBRA
         |--------------------------------------------------------------------------
         |
-        | Si es una venta en caja, no corresponde registrar mano de obra.
-        | Como la columna mano_de_obra ya existe y actualmente no acepta NULL,
-        | guardamos "no" para las ventas.
+        | Venta en caja:
+        |   - mano_de_obra = no
+        |   - motivo = null
+        |
+        | Mano de obra realizada:
+        |   - mano_de_obra = si
+        |   - motivo = null
+        |
+        | Mano de obra no realizada:
+        |   - mano_de_obra = no
+        |   - motivo obligatorio
         |
         */
 
@@ -117,6 +128,7 @@ class CobrosController extends Controller
             'telefono' => $request->telefono,
             'concepto' => $request->concepto,
             'monto' => $request->monto,
+            'metodo_pago' => $request->metodo_pago,
             'mano_de_obra' => $manoDeObra,
             'motivo_no_realizado' => $motivoNoRealizado,
         ]);
@@ -212,7 +224,17 @@ class CobrosController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | 7. FECHA LOCAL DE URUGUAY
+        | 7. PREPARAR INFORMACIÓN DEL MEDIO DE PAGO
+        |--------------------------------------------------------------------------
+        */
+
+        $metodoPagoTexto = $request->metodo_pago === 'efectivo'
+            ? 'Efectivo'
+            : 'Tarjeta';
+
+        /*
+        |--------------------------------------------------------------------------
+        | 8. FECHA LOCAL DE URUGUAY
         |--------------------------------------------------------------------------
         */
 
@@ -222,7 +244,7 @@ class CobrosController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | 8. TEXTO DEL RECIBO PARA WHATSAPP
+        | 9. TEXTO DEL RECIBO PARA WHATSAPP
         |--------------------------------------------------------------------------
         */
 
@@ -254,6 +276,9 @@ class CobrosController extends Controller
             . "*Concepto:* "
             . $request->concepto
             . "\n"
+            . "*Medio de pago:* "
+            . $metodoPagoTexto
+            . "\n"
             . "*Mano de Obra:* "
             . $estadoManoObra
             . "\n"
@@ -269,7 +294,7 @@ class CobrosController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | 9. ABRIR WHATSAPP
+        | 10. ABRIR WHATSAPP
         |--------------------------------------------------------------------------
         */
 
