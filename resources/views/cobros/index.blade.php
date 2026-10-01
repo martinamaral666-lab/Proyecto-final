@@ -242,7 +242,7 @@
             </a>
 
             <img
-                src="{{ asset('imagenes/logo listo 3.png') }}"
+                src="{{ asset('imagenes/logo.png') }}"
                 alt="Logo GestiónCash"
                 style="width: 38px; height: 38px; object-fit: contain; border-radius: 10px; background: rgba(255,255,255,0.08); padding: 4px;"
             >

@@ -189,7 +189,7 @@
         <div class="card-header">
 
             <img
-                src="{{ asset('imagenes/logo listo 3.png') }}"
+                src="{{ asset('imagenes/logo.png') }}"
                 alt="Logo GestiónCash"
             >
 

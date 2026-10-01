@@ -37,7 +37,7 @@
             ">
 
                 <img
-                    src="{{ $message->embed(public_path('imagenes/logo listo 3.png')) }}"
+                    src="{{ $message->embed(public_path('imagenes/logo.png')) }}"
                     alt="GestiónCash"
                     style="
                         max-width: 180px;
