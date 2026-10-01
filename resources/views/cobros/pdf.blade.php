@@ -19,7 +19,8 @@
     <div class="box">
         <div class="header">
             <h1 class="title">RECIBO DE PAGO</h1>
-           <p>Fecha: {{ $cobro->created_at->timezone('America/Montevideo')->format('d/m/Y H:i') }} | N° #{{ str_pad($cobro->id, 6, '0', STR_PAD_LEFT) }}</p>
+           <p>Fecha: {{ $cobro->created_at->timezone('America/Montevideo')->format('d/m/Y H:i') }}
+             | N° #{{ str_pad($cobro->id, 6, '0', STR_PAD_LEFT) }}</p>
         </div>
 
         <table class="table">

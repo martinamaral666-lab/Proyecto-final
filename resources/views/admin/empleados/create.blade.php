@@ -67,7 +67,7 @@
         <div class="alert-success">{{ session('success') }}</div>
     @endif
 
-    <form action="{{ route('admin.empleados.store') }}" method="POST" class="form-cobro">
+    <form id="employee-create-form" action="{{ route('admin.empleados.store') }}" method="POST" class="form-cobro">
         @csrf
         <div class="form-group">
             <label for="name">Nombre Completo</label>
@@ -89,9 +89,46 @@
             <input type="password" id="password_confirmation" name="password_confirmation" class="form-control" required>
         </div>
 
-        <button type="submit" class="btn-submit">Crear Empleado</button>
+        <button id="employee-create-button" type="submit" @disabled($employeeWaitSeconds > 0) class="btn-submit">
+            @if ($employeeWaitSeconds > 0)
+                Espera {{ $employeeWaitSeconds }}s
+            @else
+                Crear Empleado
+            @endif
+        </button>
     </form>
 </div>
+
+<script>
+    const employeeCreateForm = document.getElementById('employee-create-form');
+    const employeeCreateButton = document.getElementById('employee-create-button');
+    let employeeWaitSeconds = Number(@json($employeeWaitSeconds));
+
+    if (employeeWaitSeconds > 0) {
+        employeeCreateButton.disabled = true;
+
+        const updateEmployeeCountdown = () => {
+            if (employeeWaitSeconds <= 0) {
+                employeeCreateButton.disabled = false;
+                employeeCreateButton.textContent = 'Crear Empleado';
+                window.clearInterval(employeeCountdown);
+
+                return;
+            }
+
+            employeeCreateButton.textContent = `Espera ${employeeWaitSeconds}s`;
+            employeeWaitSeconds -= 1;
+        };
+
+        updateEmployeeCountdown();
+        const employeeCountdown = window.setInterval(updateEmployeeCountdown, 1000);
+    }
+
+    employeeCreateForm.addEventListener('submit', () => {
+        employeeCreateButton.disabled = true;
+        employeeCreateButton.textContent = 'Creando...';
+    });
+</script>
 
 </body>
 </html>

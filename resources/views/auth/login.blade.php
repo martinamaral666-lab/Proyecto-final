@@ -107,6 +107,12 @@
         .btn-submit:active {
             transform: translateY(0);
         }
+
+        .btn-submit:disabled {
+            background-color: #64748b;
+            cursor: not-allowed;
+            transform: none;
+        }
     </style>
 </head>
 <body>
@@ -143,3 +149,30 @@
 
     <button type="submit" class="btn-submit">Ingresar</button>
 </form>
+
+@if (session('login_wait_seconds'))
+    <script>
+        const loginButton = document.querySelector('.btn-submit');
+        let remainingSeconds = Number(@json(session('login_wait_seconds')));
+
+        if (loginButton && Number.isInteger(remainingSeconds) && remainingSeconds > 0) {
+            loginButton.disabled = true;
+
+            const updateLoginCountdown = () => {
+                if (remainingSeconds <= 0) {
+                    loginButton.disabled = false;
+                    loginButton.textContent = 'Ingresar';
+                    window.clearInterval(countdown);
+
+                    return;
+                }
+
+                loginButton.textContent = `Espera ${remainingSeconds}s`;
+                remainingSeconds -= 1;
+            };
+
+            updateLoginCountdown();
+            const countdown = window.setInterval(updateLoginCountdown, 1000);
+        }
+    </script>
+@endif
