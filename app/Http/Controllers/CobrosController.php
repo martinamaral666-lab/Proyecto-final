@@ -4,13 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Mail\NotificacionCobroAdmin;
 use App\Models\Cobros;
+use App\Models\Inventario;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class CobrosController extends Controller
 {
@@ -35,7 +38,12 @@ class CobrosController extends Controller
 
     public function create()
     {
-        return view('cobros.create');
+        $itemsInventario = Inventario::query()
+            ->select('id', 'nombre_item', 'precio', 'stock_actual')
+            ->orderBy('nombre_item')
+            ->get();
+
+        return view('cobros.create', compact('itemsInventario'));
     }
 
     public function adminIndex()
@@ -61,24 +69,89 @@ class CobrosController extends Controller
 
         RateLimiter::hit($cooldownKey, 15);
 
-        $request->validate([
+        $validated = $request->validate([
             'nombre_cliente' => 'required|string|max:255',
             'telefono' => 'required|string',
             'concepto' => 'required|string|max:255',
-            'monto' => 'required|numeric',
+            'monto' => 'required|numeric|min:0',
+            'monto_base' => 'nullable|numeric|min:0',
             'mano_de_obra' => 'required|in:si,no',
             'motivo_no_realizado' => 'nullable|required_if:mano_de_obra,no|string|max:255',
+            'productos' => 'sometimes|array',
+            'productos.*' => 'required|array:inventario_id,cantidad',
+            'productos.*.inventario_id' => 'required|integer|exists:inventarios,id',
+            'productos.*.cantidad' => 'required|integer|min:1',
         ]);
 
-        //  Guarda los datos en la Base de Datos
-        $cobro = Cobros::create([
-            'nombre_cliente' => $request->nombre_cliente,
-            'telefono' => $request->telefono,
-            'concepto' => $request->concepto,
-            'monto' => $request->monto,
-            'mano_de_obra' => $request->mano_de_obra,
-            'motivo_no_realizado' => $request->mano_de_obra === 'no' ? $request->motivo_no_realizado : null,
-        ]);
+        $cantidadesPorInventario = collect($validated['productos'] ?? [])
+            ->groupBy('inventario_id')
+            ->map(fn ($productos) => $productos->sum('cantidad'));
+        $montoManoObraEnCentavos = $validated['mano_de_obra'] === 'si'
+            ? (int) round(
+                (float) ($validated['monto_base'] ?? (
+                    $cantidadesPorInventario->isEmpty() ? $validated['monto'] : 0
+                )) * 100
+            )
+            : 0;
+
+        $cobro = DB::transaction(function () use ($cantidadesPorInventario, $montoManoObraEnCentavos, $validated) {
+            $itemsInventario = Inventario::query()
+                ->whereIn('id', $cantidadesPorInventario->keys())
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            foreach ($cantidadesPorInventario as $id => $cantidad) {
+                $item = $itemsInventario->get($id);
+
+                if (! $item || $cantidad > $item->stock_actual) {
+                    $nombreItem = $item?->nombre_item ?? 'seleccionado';
+
+                    throw ValidationException::withMessages([
+                        'productos' => "No hay suficiente stock para {$nombreItem}.",
+                    ]);
+                }
+            }
+
+            $montoProductosEnCentavos = 0;
+            $productosRecibo = [];
+
+            foreach ($cantidadesPorInventario as $id => $cantidad) {
+                $item = $itemsInventario->get($id);
+                $precioUnitarioEnCentavos = (int) round((float) $item->precio * 100);
+                $subtotalEnCentavos = $precioUnitarioEnCentavos * $cantidad;
+                $montoProductosEnCentavos += $subtotalEnCentavos;
+                $productosRecibo[] = [
+                    'nombre_item' => $item->nombre_item,
+                    'cantidad' => $cantidad,
+                    'precio_unitario' => number_format($precioUnitarioEnCentavos / 100, 2, '.', ''),
+                    'subtotal' => number_format($subtotalEnCentavos / 100, 2, '.', ''),
+                ];
+                $item->stock_actual -= $cantidad;
+                $item->save();
+            }
+
+            $montoTotal = number_format(
+                ($montoManoObraEnCentavos + $montoProductosEnCentavos) / 100,
+                2,
+                '.',
+                ''
+            );
+
+            return Cobros::create([
+                'nombre_cliente' => $validated['nombre_cliente'],
+                'telefono' => $validated['telefono'],
+                'concepto' => $validated['concepto'],
+                'monto' => $montoTotal,
+                'productos' => $productosRecibo,
+                'monto_mano_obra' => number_format($montoManoObraEnCentavos / 100, 2, '.', ''),
+                'mano_de_obra' => $validated['mano_de_obra'],
+                'motivo_no_realizado' => $validated['mano_de_obra'] === 'no'
+                    ? $validated['motivo_no_realizado']
+                    : null,
+            ]);
+        });
 
         //  Genera el PDF y enviar email
         try {
@@ -107,6 +180,13 @@ class CobrosController extends Controller
             ? 'Realizada'
             : 'No realizada ('.($request->motivo_no_realizado ?? 'N/A').')';
 
+        $detalleProductos = collect($cobro->productos ?? [])
+            ->map(fn (array $producto) => '* '.$producto['nombre_item']
+                .' x'.$producto['cantidad']
+                .' — $'.number_format((float) $producto['precio_unitario'], 2).' c/u'
+                .' = $'.number_format((float) $producto['subtotal'], 2))
+            ->implode("\n");
+
         // Fecha en formato local de Uruguay para el ticket
         $fechaLocal = $cobro->created_at->timezone('America/Montevideo')->format('d/m/Y H:i');
 
@@ -118,9 +198,15 @@ class CobrosController extends Controller
                      .'*Fecha:* '.$fechaLocal."\n\n"
                      .'*Cliente:* '.$request->nombre_cliente."\n"
                      .'*Concepto:* '.$request->concepto."\n"
+                     .($detalleProductos !== ''
+                         ? "*Productos:*\n{$detalleProductos}\n"
+                         : '')
                      .'*Mano de Obra:* '.$estadoManoObra."\n"
+                     .((float) $cobro->monto_mano_obra > 0
+                         ? '*Monto de mano de obra:* $'.number_format((float) $cobro->monto_mano_obra, 2)."\n"
+                         : '')
                      ."--------------------------\n"
-                     .'*MONTO TOTAL:* $'.number_format($request->monto, 2)."\n"
+                     .'*MONTO TOTAL:* $'.number_format((float) $cobro->monto, 2)."\n"
                      ."==========================\n\n"
                      .'¡Muchas gracias por su preferencia!';
 

@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('unidad');
             $table->string('ubicacion');
             $table->string('estado');
+            $table->integer('precio');
             $table->timestamps();
         });
     }

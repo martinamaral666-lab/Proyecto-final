@@ -16,5 +16,6 @@ class Inventario extends Model
         'unidad',
         'ubicacion',
         'estado',
+        'precio',
     ];
 }

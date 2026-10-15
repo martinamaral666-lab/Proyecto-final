@@ -49,6 +49,7 @@ class InventarioController extends Controller
             'unidad' => 'required|string',
             'ubicacion' => 'required|string',
             'estado' => 'required|string',
+            'precio' => 'required|numeric|min:0',
         ]);
 
         Inventario::create($validated);

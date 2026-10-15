@@ -214,6 +214,7 @@
                                         <th class="py-4 px-6">Stock Actual</th>
                                         <th class="py-4 px-6">Unidad</th>
                                         <th class="py-4 px-6">Ubicación</th>
+                                        <th class="py-4 px-6">Precio</th>
                                         <th class="py-4 px-6">Estado</th>
                                         <th class="py-4 px-6 text-center">Acciones</th>
                                     </tr>
@@ -227,6 +228,7 @@
                                             <td class="py-4 px-6 font-medium">{{ $item->stock_actual }}</td>
                                             <td class="py-4 px-6">{{ $item->unidad }}</td>
                                             <td class="py-4 px-6">{{ $item->ubicacion }}</td>
+                                            <td class="py-4 px-6">${{ number_format($item->precio, 2) }}</td>
                                             <td class="py-4 px-6">
                                                 <span class="px-3 py-1 text-xs font-bold rounded-full {{ strtolower($item->estado) == 'critico' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700' }}">
                                                     {{ ucfirst($item->estado) }}
@@ -261,7 +263,7 @@
                                         </tr>
                                         @empty
                                         <tr>
-                                            <td colspan="7" class="text-center py-8 text-slate-400 font-medium">No hay registros encontrados en el inventario.</td>
+                                            <td colspan="8" class="text-center py-8 text-slate-400 font-medium">No hay registros encontrados en el inventario.</td>
                                         </tr>
                                         @endforelse
                                     @endisset

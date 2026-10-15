@@ -11,6 +11,7 @@ it('blocks another inventory save for 15 seconds', function () {
         'unidad' => 'unidades',
         'ubicacion' => 'Depósito',
         'estado' => 'normal',
+        'precio' => 10,
     ];
 
     $this->actingAs($admin)
@@ -40,4 +41,14 @@ it('blocks another inventory save for 15 seconds', function () {
         ->assertRedirect(route('inventario.index'));
 
     $this->assertDatabaseCount('inventarios', 2);
+});
+
+it('renders the inventory form from the edit route', function () {
+    $admin = User::factory()->create(['rol' => 'admin']);
+
+    $this->actingAs($admin)
+        ->get(route('inventario.editar'))
+        ->assertOk()
+        ->assertSee('id="inventory-save-button" type="submit"', false)
+        ->assertSee('Guardar Ítem');
 });

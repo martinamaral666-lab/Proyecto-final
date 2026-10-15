@@ -99,19 +99,29 @@
             <!-- DATOS DEL COBRO -->
             <div class="seccion-titulo">Datos del cobro</div>
 
+            @include('cobros._inventario')
+
             <div class="form-group">
                 <label for="concepto">Concepto / Descripción</label>
                 <input type="text" id="concepto" name="concepto" class="form-control" placeholder="Ej: Materiales eléctricos" required>
             </div>
 
-            <div class="form-group">
-                <label for="monto">Monto ($)</label>
-                <input type="number" id="monto" name="monto" class="form-control" step="0.01" min="0" placeholder="0.00" required>
-            </div>
-
             <!-- SECCIÓN MANO DE OBRA -->
             <div id="seccion-mano-obra" class="oculto">
                 <div class="seccion-titulo">Datos de la mano de obra</div>
+
+                <div id="grupo-monto-manual" class="form-group">
+                    <label for="monto_base">Monto manual (mano de obra/otros) ($)</label>
+                    <input
+                        type="number"
+                        id="monto_base"
+                        name="monto_base"
+                        class="form-control"
+                        step="0.01"
+                        min="0"
+                        value="{{ old('monto_base', '0.00') }}"
+                    >
+                </div>
 
                 <div class="form-group">
                     <label for="mano_de_obra">¿Se realizó la mano de obra?</label>
@@ -146,14 +156,21 @@
         const selectManoObra = document.getElementById('mano_de_obra');
         const grupoMotivo = document.getElementById('grupo-motivo');
         const motivoNoRealizado = document.getElementById('motivo_no_realizado');
+        const montoManual = document.getElementById('monto_base');
+        const receiptForm = document.getElementById('receipt-form');
+        const receiptSubmitButton = document.getElementById('receipt-submit-button');
 
         function actualizarTipoRegistro() {
             if (manoObra.checked) {
                 seccionManoObra.classList.remove('oculto');
                 selectManoObra.required = true;
+                montoManual.required = true;
             } else {
                 seccionManoObra.classList.add('oculto');
                 selectManoObra.required = false;
+                montoManual.required = false;
+                montoManual.value = '0.00';
+                montoManual.dispatchEvent(new Event('input', { bubbles: true }));
                 grupoMotivo.classList.add('oculto');
                 motivoNoRealizado.required = false;
             }
@@ -186,8 +203,6 @@
         actualizarTipoRegistro();
         actualizarMotivo();
 
-        const receiptForm = document.getElementById('receipt-form');
-        const receiptSubmitButton = document.getElementById('receipt-submit-button');
         let receiptWaitSeconds = Number(@json($receiptWaitSeconds));
 
         if (receiptWaitSeconds > 0) {

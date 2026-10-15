@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\CuentaController;
 use App\Http\Controllers\CobrosController;
 use App\Http\Controllers\InventarioController;
 use App\Models\Cobros;
+use App\Models\Inventario;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -225,23 +226,31 @@ Route::middleware(['auth', 'admin'])
 Route::middleware(['auth', 'empleado'])
     ->get('/crear/cobros', function (Request $request) {
         $cobros = Cobros::paginate(10);
+        $itemsInventario = Inventario::query()
+            ->select('id', 'nombre_item', 'precio', 'stock_actual')
+            ->orderBy('nombre_item')
+            ->get();
         $cooldownKey = 'charge-receipt:'.$request->user()->getAuthIdentifier();
         $receiptWaitSeconds = RateLimiter::tooManyAttempts($cooldownKey, 1)
             ? RateLimiter::availableIn($cooldownKey)
             : 0;
 
-        return view('cobros.cobro', compact('cobros', 'receiptWaitSeconds'));
+        return view('cobros.cobro', compact('cobros', 'itemsInventario', 'receiptWaitSeconds'));
     })->name('cobros.empleado');
 
 Route::middleware(['auth', 'admin'])
     ->get('/admin/crear/cobros', function (Request $request) {
         $cobros = Cobros::paginate(10);
+        $itemsInventario = Inventario::query()
+            ->select('id', 'nombre_item', 'precio', 'stock_actual')
+            ->orderBy('nombre_item')
+            ->get();
         $cooldownKey = 'charge-receipt:'.$request->user()->getAuthIdentifier();
         $receiptWaitSeconds = RateLimiter::tooManyAttempts($cooldownKey, 1)
             ? RateLimiter::availableIn($cooldownKey)
             : 0;
 
-        return view('cobros.cobro', compact('cobros', 'receiptWaitSeconds'));
+        return view('cobros.cobro', compact('cobros', 'itemsInventario', 'receiptWaitSeconds'));
     })->name('cobros.cobros');
 
 Route::middleware(['auth', 'admin'])
@@ -318,8 +327,13 @@ Route::middleware(['auth', 'admin'])->group(function () {
         return view('admin.inventario', compact('saveWaitSeconds'));
     })->name('inventario.crear');
 
-    Route::get('/inventario/editar', function () {
-        return view('admin.inventario');
+    Route::get('/inventario/editar', function (Request $request) {
+        $cooldownKey = 'inventory-save:'.$request->user()->getAuthIdentifier();
+        $saveWaitSeconds = RateLimiter::tooManyAttempts($cooldownKey, 1)
+            ? RateLimiter::availableIn($cooldownKey)
+            : 0;
+
+        return view('admin.inventario', compact('saveWaitSeconds'));
     })->name('inventario.editar');
 
     Route::patch('/menu/admin/inventario/{id}/uso', [InventarioController::class, 'uso'])->name('inventario.uso');
