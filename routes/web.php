@@ -139,6 +139,10 @@ Route::post('/reset-password', function (Request $request) {
     );
 
     if ($status === Password::PASSWORD_RESET) {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
         return redirect()
             ->route('login')
             ->with(
