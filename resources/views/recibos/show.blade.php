@@ -62,6 +62,35 @@
                     <span class="font-medium text-gray-700">{{ $cobro->concepto }}</span>
                 </div>
 
+                @if (!empty($cobro->productos))
+                    <div class="border-t border-dashed border-gray-200 pt-3">
+                        <h2 class="mb-2 font-bold text-gray-700">Productos</h2>
+                        <div class="space-y-3">
+                            @foreach ($cobro->productos as $producto)
+                                <div class="rounded-lg bg-gray-50 p-3">
+                                    <p class="font-semibold text-gray-800">{{ $producto['nombre_item'] }}</p>
+                                    <div class="mt-1 grid grid-cols-2 gap-1 text-xs text-gray-600">
+                                        <span>Cantidad: {{ $producto['cantidad'] }}</span>
+                                        <span>Precio unitario: ${{ number_format((float) $producto['precio_unitario'], 2) }}</span>
+                                        <span class="col-span-2 font-semibold">
+                                            Subtotal: ${{ number_format((float) $producto['subtotal'], 2) }}
+                                        </span>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                @if ((float) ($cobro->monto_mano_obra ?? 0) > 0)
+                    <div class="flex justify-between items-center border-t border-dashed border-gray-200 pt-3">
+                        <span class="text-gray-500">Mano de obra</span>
+                        <span class="font-bold text-gray-800">
+                            ${{ number_format((float) $cobro->monto_mano_obra, 2) }}
+                        </span>
+                    </div>
+                @endif
+
                 <div class="flex justify-between items-center">
                     <span class="text-gray-500">Fecha de pago</span>
                     <span class="font-mono text-xs text-gray-700">

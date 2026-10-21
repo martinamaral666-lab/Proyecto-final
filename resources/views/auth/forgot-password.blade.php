@@ -84,6 +84,7 @@
             <!-- FORMULARIO -->
 
             <form
+                id="reset-link-form"
                 method="POST"
                 action="{{ route('password.email') }}"
                 class="space-y-5"
@@ -118,10 +119,16 @@
 
 
                 <button
+                    id="reset-link-button"
                     type="submit"
-                    class="w-full bg-[#044e39] hover:bg-[#033b2b] text-white font-semibold px-6 py-3 rounded-lg shadow transition"
+                    @disabled($resetWaitSeconds > 0)
+                    class="w-full bg-[#044e39] hover:bg-[#033b2b] text-white font-semibold px-6 py-3 rounded-lg shadow transition disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                    Enviar enlace
+                    @if ($resetWaitSeconds > 0)
+                        Espera {{ $resetWaitSeconds }}s
+                    @else
+                        Enviar enlace
+                    @endif
                 </button>
 
 
@@ -133,12 +140,15 @@
 
             <div class="text-center mt-6">
 
-                <a
-                    href="{{ route('login') }}"
-                    class="text-sm font-semibold text-emerald-700 hover:text-emerald-900 hover:underline"
-                >
-                    Volver al inicio de sesión
-                </a>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button
+                        type="submit"
+                        class="text-sm font-semibold text-emerald-700 hover:text-emerald-900 hover:underline bg-transparent border-0 cursor-pointer"
+                    >
+                        Volver al inicio de sesión
+                    </button>
+                </form>
 
             </div>
 
@@ -146,6 +156,38 @@
         </div>
 
     </div>
+
+    <script>
+        const resetLinkForm = document.getElementById('reset-link-form');
+        const resetLinkButton = document.getElementById('reset-link-button');
+        let resetWaitSeconds = Number(@json($resetWaitSeconds));
+
+        if (resetWaitSeconds > 0) {
+            resetLinkButton.disabled = true;
+
+            const updateResetCountdown = () => {
+                resetWaitSeconds -= 1;
+
+                if (resetWaitSeconds <= 0) {
+                    resetLinkButton.disabled = false;
+                    resetLinkButton.textContent = 'Enviar enlace';
+                    window.clearInterval(resetCountdown);
+
+                    return;
+                }
+
+                resetLinkButton.textContent = `Espera ${resetWaitSeconds}s`;
+            };
+
+            resetLinkButton.textContent = `Espera ${resetWaitSeconds}s`;
+            const resetCountdown = window.setInterval(updateResetCountdown, 1000);
+        }
+
+        resetLinkForm.addEventListener('submit', () => {
+            resetLinkButton.disabled = true;
+            resetLinkButton.textContent = 'Enviando...';
+        });
+    </script>
 
 
 </body>

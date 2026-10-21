@@ -16,11 +16,9 @@ class CuentaController extends Controller
         return view('admin.cuenta', compact('usuario'));
     }
 
-
     public function update(Request $request)
     {
         $usuario = Auth::user();
-
 
         /*
         |--------------------------------------------------------------------------
@@ -33,30 +31,25 @@ class CuentaController extends Controller
                 'required',
                 'email',
                 'max:255',
-                'unique:users,email,' . $usuario->id
+                'unique:users,email,'.$usuario->id,
             ],
 
             'telefono' => [
                 'nullable',
                 'string',
-                'max:20'
+                'max:20',
             ],
 
         ], [
 
-            'email.required' =>
-                'El correo electrónico es obligatorio.',
+            'email.required' => 'El correo electrónico es obligatorio.',
 
-            'email.email' =>
-                'El correo electrónico no es válido.',
+            'email.email' => 'El correo electrónico no es válido.',
 
-            'email.unique' =>
-                'Ese correo electrónico ya está siendo utilizado.',
+            'email.unique' => 'Ese correo electrónico ya está siendo utilizado.',
 
-            'telefono.max' =>
-                'El teléfono no puede superar los 20 caracteres.',
+            'telefono.max' => 'El teléfono no puede superar los 20 caracteres.',
         ]);
-
 
         /*
         |--------------------------------------------------------------------------
@@ -69,9 +62,7 @@ class CuentaController extends Controller
             $request->filled('password') ||
             $request->filled('password_confirmation');
 
-
         if ($quiereCambiarPassword) {
-
 
             /*
             |--------------------------------------------------------------------------
@@ -79,16 +70,14 @@ class CuentaController extends Controller
             |--------------------------------------------------------------------------
             */
 
-            if (!$request->filled('password_actual')) {
+            if (! $request->filled('password_actual')) {
 
                 return back()
                     ->withErrors([
-                        'password_actual' =>
-                            'Debés ingresar tu contraseña actual.'
+                        'password_actual' => 'Debés ingresar tu contraseña actual.',
                     ])
                     ->withInput();
             }
-
 
             /*
             |--------------------------------------------------------------------------
@@ -96,19 +85,17 @@ class CuentaController extends Controller
             |--------------------------------------------------------------------------
             */
 
-            if (!Hash::check(
+            if (! Hash::check(
                 $request->password_actual,
                 $usuario->password
             )) {
 
                 return back()
                     ->withErrors([
-                        'password_actual' =>
-                            'La contraseña actual es incorrecta.'
+                        'password_actual' => 'La contraseña actual es incorrecta.',
                     ])
                     ->withInput();
             }
-
 
             /*
             |--------------------------------------------------------------------------
@@ -122,21 +109,17 @@ class CuentaController extends Controller
                     'required',
                     'string',
                     'min:8',
-                    'confirmed'
+                    'confirmed',
                 ],
 
             ], [
 
-                'password.required' =>
-                    'Debés ingresar una nueva contraseña.',
+                'password.required' => 'Debés ingresar una nueva contraseña.',
 
-                'password.min' =>
-                    'La nueva contraseña debe tener al menos 8 caracteres.',
+                'password.min' => 'La nueva contraseña debe tener al menos 8 caracteres.',
 
-                'password.confirmed' =>
-                    'La nueva contraseña y su confirmación no coinciden.',
+                'password.confirmed' => 'La nueva contraseña y su confirmación no coinciden.',
             ]);
-
 
             /*
             |--------------------------------------------------------------------------
@@ -151,12 +134,10 @@ class CuentaController extends Controller
 
                 return back()
                     ->withErrors([
-                        'password' =>
-                            'La nueva contraseña debe ser diferente de la contraseña actual.'
+                        'password' => 'La nueva contraseña debe ser diferente de la contraseña actual.',
                     ])
                     ->withInput();
             }
-
 
             /*
             |--------------------------------------------------------------------------
@@ -168,7 +149,6 @@ class CuentaController extends Controller
                 $request->password
             );
         }
-
 
         /*
         |--------------------------------------------------------------------------
@@ -183,7 +163,6 @@ class CuentaController extends Controller
             $request->telefono;
 
         $usuario->save();
-
 
         /*
         |--------------------------------------------------------------------------

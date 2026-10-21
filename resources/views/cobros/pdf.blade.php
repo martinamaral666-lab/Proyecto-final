@@ -36,6 +36,35 @@
                 <th>Concepto:</th>
                 <td>{{ $cobro->concepto }}</td>
             </tr>
+            @if (!empty($cobro->productos))
+                <tr>
+                    <th colspan="2">Productos</th>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Ítem</th>
+                                    <th>Cantidad</th>
+                                    <th>Precio unitario</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($cobro->productos as $producto)
+                                    <tr>
+                                        <td>{{ $producto['nombre_item'] }}</td>
+                                        <td>{{ $producto['cantidad'] }}</td>
+                                        <td>${{ number_format((float) $producto['precio_unitario'], 2) }}</td>
+                                        <td>${{ number_format((float) $producto['subtotal'], 2) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+            @endif
             <tr>
                 <th>Mano de Obra:</th>
                 <td>
@@ -46,6 +75,12 @@
                     @endif
                 </td>
             </tr>
+            @if ((float) $cobro->monto_mano_obra > 0)
+                <tr>
+                    <th>Monto de mano de obra:</th>
+                    <td>${{ number_format((float) $cobro->monto_mano_obra, 2) }}</td>
+                </tr>
+            @endif
         </table>
 
         <div class="total">

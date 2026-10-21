@@ -3,64 +3,74 @@
 namespace App\Http\Controllers;
 use App\Models\Inventario;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 
-class InventarioController extends Controller {
-    public function index(Request $request) {
-    $query = Inventario::query();
+class InventarioController extends Controller
+{
+    public function index(Request $request)
+    {
+        $query = Inventario::query();
 
-    if ($request->has('search')) {
-        $query->where('nombre_item', 'like', '%' . $request->search . '%')
-              ->orWhere('categoria', 'like', '%' . $request->search . '%');
+        if ($request->has('search')) {
+            $query->where('nombre_item', 'like', '%'.$request->search.'%')
+                ->orWhere('categoria', 'like', '%'.$request->search.'%');
+        }
+
+        $items = $query->get();
+
+        $stockCritico = Inventario::where('estado', 'like', '%Crítico%')->count();
+        $enUsoObra = Inventario::where('estado', 'like', '%En Uso%')->count();
+        $nuevosIngresos = Inventario::where('created_at', '>=', now()->subWeek())->count();
+
+        return view('admin.menu', compact('items', 'stockCritico', 'enUsoObra', 'nuevosIngresos'));
     }
 
-    $items = $query->get();
+    public function store(Request $request)
+    {
+        $cooldownKey = 'inventory-save:'.$request->user()->getAuthIdentifier();
 
-    $stockCritico = Inventario::where('estado', 'like', '%Crítico%')->count();
-    $enUsoObra = Inventario::where('estado', 'like', '%En Uso%')->count();
-    $nuevosIngresos = Inventario::where('created_at', '>=', now()->subWeek())->count();
+        if (RateLimiter::tooManyAttempts($cooldownKey, 1)) {
+            $waitSeconds = RateLimiter::availableIn($cooldownKey);
 
-    return view('admin.menu', compact('items', 'stockCritico', 'enUsoObra', 'nuevosIngresos'));
-}
+            return back()
+                ->withErrors([
+                    'save' => "Espera {$waitSeconds} segundos antes de guardar otro ítem.",
+                ])
+                ->with('save_wait_seconds', $waitSeconds);
+        }
 
-    public function store(Request $request) {
-        $request->validate([
+        RateLimiter::hit($cooldownKey, 15);
+
+        $validated = $request->validate([
             'nombre_item' => 'required|string|max:255',
             'categoria' => 'required|string|max:255',
             'stock_actual' => 'required|integer',
             'unidad' => 'required|string',
             'ubicacion' => 'required|string',
             'estado' => 'required|string',
+            'precio' => 'required|numeric|min:0',
         ]);
 
-        Inventario::create($request->all());
+        Inventario::create($validated);
 
         return redirect()->route('admin.menu')->with('success', 'Ítem agregado correctamente.');
     }
 
-    public function destroy($id) {
-    $item = Inventario::findOrFail($id);
-    $item->delete();
+    public function destroy($id)
+    {
+        $item = Inventario::findOrFail($id);
+        $item->delete();
 
-    // Cambiar 'admin.inventario' por una ruta existente
-    return redirect()->route('admin.menu')->with('success', 'Ítem eliminado.');
-}
+        return redirect()->route('inventario.index')->with('success', 'Ítem eliminado.');
+    }
 
     public function uso($id)
-{
-    $item = Inventario::findOrFail($id);
+    {
+        $item = Inventario::findOrFail($id);
 
+        $item->estado = 'en uso';
+        $item->save();
 
-    $item->estado = 'en uso';
-    $item->save();
-
-    return redirect()->back()->with('el item esta en uso.');
-}
-public function edit($id)
-{
-    // Busca el registro en la base de datos
-    $item = Inventario::findOrFail($id);
-
-    // Retorna la vista (asegúrate de que sea la correcta para editar)
-    return view('admin.inventario', compact('item'));
-}
+        return redirect()->back()->with('el item esta en uso.');
+    }
 }

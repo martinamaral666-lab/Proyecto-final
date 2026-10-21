@@ -79,6 +79,12 @@
                                 </div>
 
                                 <div>
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Precio</label>
+                                    <input type="number" name="precio" step="1" class="w-full rounded-lg border-slate-300 border px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none" required>
+                                </div>
+
+
+                                <div>
                                     <label class="block text-sm font-medium text-slate-700 mb-1">Estado</label>
                                     <select name="estado" id="estadoSelect" onchange="cambiarColorEstado(this)" class="w-full rounded-lg border-slate-300 border px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-medium text-emerald-700">
                                         <option value="normal" class="text-emerald-700">Normal</option>
@@ -90,6 +96,14 @@
                             <div class="flex justify-end gap-3 mt-6">
                                 <a href="{{ route('admin.menu') }}" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors">Cancelar</a>
                                 <button type="submit" class="px-4 py-2 bg-emerald-800 text-white rounded-lg hover:bg-emerald-900 transition-colors">Guardar Ítem</button>
+                                <a href="{{ route('inventario.index') }}" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors">Cancelar</a>
+                                <button id="inventory-save-button" type="submit" @disabled($saveWaitSeconds > 0) class="px-4 py-2 bg-emerald-800 text-white rounded-lg hover:bg-emerald-900 transition-colors disabled:cursor-not-allowed disabled:opacity-60">
+                                    @if ($saveWaitSeconds > 0)
+                                        Espera {{ $saveWaitSeconds }}s
+                                    @else
+                                        Guardar Ítem
+                                    @endif
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -110,6 +124,38 @@
     document.addEventListener("DOMContentLoaded", function() {
         cambiarColorEstado(document.getElementById('estadoSelect'));
     });
+<<<<<<< HEAD
+=======
+
+    const saveForm = document.getElementById('inventory-save-form');
+    const saveButton = document.getElementById('inventory-save-button');
+    let remainingSeconds = Number(@json($saveWaitSeconds));
+
+    if (remainingSeconds > 0) {
+        saveButton.disabled = true;
+
+        const updateSaveCountdown = () => {
+            if (remainingSeconds <= 0) {
+                saveButton.disabled = false;
+                saveButton.textContent = 'Guardar Ítem';
+                window.clearInterval(countdown);
+
+                return;
+            }
+
+            saveButton.textContent = `Espera ${remainingSeconds}s`;
+            remainingSeconds -= 1;
+        };
+
+        updateSaveCountdown();
+        const countdown = window.setInterval(updateSaveCountdown, 1000);
+    }
+
+    saveForm.addEventListener('submit', () => {
+        saveButton.disabled = true;
+        saveButton.textContent = 'Guardando...';
+    });
+>>>>>>> remotes/origin/Proteccion-de-rutas
     </script>
 </body>
 </html>

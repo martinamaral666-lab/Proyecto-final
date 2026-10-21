@@ -188,12 +188,15 @@
 
             <div class="text-center mt-6">
 
-                <a
-                    href="{{ route('login') }}"
-                    class="text-sm font-semibold text-emerald-700 hover:text-emerald-900 hover:underline"
-                >
-                    Volver al inicio de sesión
-                </a>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button
+                        type="submit"
+                        class="text-sm font-semibold text-emerald-700 hover:text-emerald-900 hover:underline bg-transparent border-0 cursor-pointer"
+                    >
+                        Volver al inicio de sesión
+                    </button>
+                </form>
 
             </div>
 

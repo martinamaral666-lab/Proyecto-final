@@ -26,6 +26,7 @@
         .form-control { width: 100%; padding: 10px; background: #f8fafc; border: 1px solid #cbd5e0; border-radius: 8px; outline: none; font-size: 0.95rem; }
         .btn-submit { width: 100%; padding: 12px; background: #009966; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; margin-top: 10px; }
         .btn-submit:hover { background: #058257; }
+        .btn-submit:disabled { opacity: 0.65; cursor: not-allowed; }
         .alert-error { background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem; }
         .seccion-titulo { font-size: 0.9rem; font-weight: bold; color: #009966; margin: 20px 0 10px; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
         .tipo-registro { display: flex; gap: 15px; margin-top: 5px; }
@@ -62,7 +63,7 @@
             </div>
         @endif
 
-        <form action="{{ route('cobros.store') }}" method="POST">
+        <form id="receipt-form" action="{{ route('cobros.store') }}" method="POST">
             @csrf
 
             <!-- TIPO DE REGISTRO -->
@@ -98,6 +99,8 @@
             <!-- DATOS DEL COBRO -->
             <div class="seccion-titulo">Datos del cobro</div>
 
+            @include('cobros._inventario')
+
             <div class="form-group">
                 <label for="concepto">Concepto / Descripción</label>
                 <input type="text" id="concepto" name="concepto" class="form-control" placeholder="Ej: Materiales eléctricos" required>
@@ -111,6 +114,19 @@
             <!-- SECCIÓN MANO DE OBRA -->
             <div id="seccion-mano-obra" class="oculto">
                 <div class="seccion-titulo">Datos de la mano de obra</div>
+
+                <div id="grupo-monto-manual" class="form-group">
+                    <label for="monto_base">Monto manual (mano de obra/otros) ($)</label>
+                    <input
+                        type="number"
+                        id="monto_base"
+                        name="monto_base"
+                        class="form-control"
+                        step="0.01"
+                        min="0"
+                        value="{{ old('monto_base', '0.00') }}"
+                    >
+                </div>
 
                 <div class="form-group">
                     <label for="mano_de_obra">¿Se realizó la mano de obra?</label>
@@ -127,8 +143,12 @@
             </div>
 
             <!-- BOTÓN GUARDAR -->
-            <button type="submit" class="btn-submit">
-                Guardar y Generar Recibo
+            <button id="receipt-submit-button" type="submit" class="btn-submit" @disabled($receiptWaitSeconds > 0)>
+                @if ($receiptWaitSeconds > 0)
+                    Espera {{ $receiptWaitSeconds }}s
+                @else
+                    Guardar y Generar Recibo
+                @endif
             </button>
         </form>
     </div>
@@ -141,14 +161,21 @@
         const selectManoObra = document.getElementById('mano_de_obra');
         const grupoMotivo = document.getElementById('grupo-motivo');
         const motivoNoRealizado = document.getElementById('motivo_no_realizado');
+        const montoManual = document.getElementById('monto_base');
+        const receiptForm = document.getElementById('receipt-form');
+        const receiptSubmitButton = document.getElementById('receipt-submit-button');
 
         function actualizarTipoRegistro() {
             if (manoObra.checked) {
                 seccionManoObra.classList.remove('oculto');
                 selectManoObra.required = true;
+                montoManual.required = true;
             } else {
                 seccionManoObra.classList.add('oculto');
                 selectManoObra.required = false;
+                montoManual.required = false;
+                montoManual.value = '0.00';
+                montoManual.dispatchEvent(new Event('input', { bubbles: true }));
                 grupoMotivo.classList.add('oculto');
                 motivoNoRealizado.required = false;
             }
@@ -180,6 +207,33 @@
 
         actualizarTipoRegistro();
         actualizarMotivo();
+
+        let receiptWaitSeconds = Number(@json($receiptWaitSeconds));
+
+        if (receiptWaitSeconds > 0) {
+            receiptSubmitButton.disabled = true;
+
+            const updateReceiptCountdown = () => {
+                if (receiptWaitSeconds <= 0) {
+                    receiptSubmitButton.disabled = false;
+                    receiptSubmitButton.textContent = 'Guardar y Generar Recibo';
+                    window.clearInterval(receiptCountdown);
+
+                    return;
+                }
+
+                receiptSubmitButton.textContent = `Espera ${receiptWaitSeconds}s`;
+                receiptWaitSeconds -= 1;
+            };
+
+            updateReceiptCountdown();
+            const receiptCountdown = window.setInterval(updateReceiptCountdown, 1000);
+        }
+
+        receiptForm.addEventListener('submit', () => {
+            receiptSubmitButton.disabled = true;
+            receiptSubmitButton.textContent = 'Generando recibo...';
+        });
     </script>
 
 </body>

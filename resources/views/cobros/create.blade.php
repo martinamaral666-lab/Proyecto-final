@@ -17,8 +17,16 @@
         </div>
 
         <!-- FORMULARIO -->
-        <form action="{{ route('cobro.store') }}" method="POST" class="p-6 space-y-4">
+        <form id="receipt-form" action="{{ route('cobros.store') }}" method="POST" class="p-6 space-y-4">
             @csrf
+
+            @if ($errors->any())
+                <div role="alert" class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    @foreach ($errors->all() as $error)
+                        <p>{{ $error }}</p>
+                    @endforeach
+                </div>
+            @endif
 
             <!-- NOMBRE CLIENTE -->
             <div>
@@ -33,6 +41,9 @@
               <input type="tel" name="telefono" id="telefono" required placeholder="Ej. 099123456"
               class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600">
            </div>
+
+            @include('cobros._inventario')
+
             <!-- CONCEPTO -->
             <div>
                 <label for="concepto" class="block text-xs font-bold uppercase text-gray-600 mb-1">Concepto</label>
@@ -40,21 +51,32 @@
                     class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600">
             </div>
 
-            <!-- MONTO -->
-            <div>
-                <label for="monto" class="block text-xs font-bold uppercase text-gray-600 mb-1">Monto ($)</label>
-                <input type="number" step="0.01" name="monto" id="monto" required placeholder="0.00"
-                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600">
-            </div>
-
             <!-- ¿SE REALIZÓ LA MANO DE OBRA? -->
             <div>
+                <div class="mb-2 border-b-2 border-gray-200 pb-1 text-sm font-bold uppercase tracking-wide text-emerald-700">
+                    Datos de la mano de obra
+                </div>
                 <label for="mano_de_obra" class="block text-xs font-bold uppercase text-gray-600 mb-1">¿Se realizó la mano de obra?</label>
                 <select name="mano_de_obra" id="mano_de_obra" onchange="toggleMotivo(this.value)" required
                     class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600">
                     <option value="si" selected>Sí, realizada</option>
                     <option value="no">No realizada</option>
                 </select>
+            </div>
+
+            <div id="grupo-monto-manual" class="hidden">
+                <label for="monto_base" class="mb-1 block text-xs font-bold uppercase text-gray-600">
+                    Monto manual (mano de obra/otros) ($)
+                </label>
+                <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    name="monto_base"
+                    id="monto_base"
+                    value="{{ old('monto_base', '0.00') }}"
+                    class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-800 focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
+                >
             </div>
 
             <!-- MOTIVO POR EL CUAL NO SE REALIZÓ (OCULTO POR DEFECTO) -->
@@ -81,12 +103,19 @@
     <script>
         function toggleMotivo(valor) {
             const campoMotivo = document.getElementById('campo_motivo');
+            const grupoMontoManual = document.getElementById('grupo-monto-manual');
+            const montoManual = document.getElementById('monto_base');
             if (valor === 'no') {
                 campoMotivo.classList.remove('hidden');
+                grupoMontoManual.classList.add('hidden');
+                montoManual.value = '0.00';
             } else {
                 campoMotivo.classList.add('hidden');
+                grupoMontoManual.classList.remove('hidden');
             }
+            montoManual.dispatchEvent(new Event('input', { bubbles: true }));
         }
+        toggleMotivo(document.getElementById('mano_de_obra').value);
     </script>
 
 </body>

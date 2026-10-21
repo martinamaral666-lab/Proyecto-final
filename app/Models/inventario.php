@@ -1,10 +1,12 @@
 <?php
 
 namespace App\Models;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class Inventario extends Model {
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Inventario extends Model
+{
     use HasFactory;
 
     protected $fillable = [
@@ -13,6 +15,7 @@ class Inventario extends Model {
         'stock_actual',
         'unidad',
         'ubicacion',
-        'estado'
+        'estado',
+        'precio',
     ];
 }

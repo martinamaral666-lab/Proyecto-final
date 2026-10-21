@@ -1,16 +1,18 @@
 <?php
 
+use App\Http\Controllers\Admin\CuentaController;
 use App\Http\Controllers\CobrosController;
 use App\Http\Controllers\InfoClienteController;
 use App\Http\Controllers\EmpleadoController;
 use App\Http\Controllers\InventarioController;
-use App\Http\Controllers\Admin\CuentaController;
 use App\Models\User;
 use App\Models\Cobros;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 
 /*
@@ -29,7 +31,27 @@ Route::post('/login-process', function (Request $request) {
         'password' => ['required'],
     ]);
 
+    // 1. Generar las llaves del rate limiter antes de evaluar la autenticación
+    $identifier = hash('sha256', strtolower(trim($credentials['email'])).'|'.$request->ip());
+    $attemptsKey = 'login-attempts:'.$identifier;
+    $lockoutKey = 'login-lockout:'.$identifier;
+
+    // 2. Verificar si el usuario está bloqueado temporalmente
+    if (RateLimiter::tooManyAttempts($lockoutKey, 1)) {
+        $waitSeconds = RateLimiter::availableIn($lockoutKey);
+
+        return back()
+            ->withErrors([
+                'email' => "Demasiados intentos. Espera {$waitSeconds} segundos antes de volver a intentar.",
+            ])
+            ->with('login_wait_seconds', $waitSeconds)
+            ->onlyInput('email');
+    }
+
+    // 3. Intentar iniciar sesión
     if (Auth::attempt($credentials)) {
+        RateLimiter::clear($attemptsKey);
+        RateLimiter::clear($lockoutKey);
         $request->session()->regenerate();
         $user = Auth::user();
 
@@ -48,6 +70,20 @@ Route::post('/login-process', function (Request $request) {
             ->withErrors([
                 'email' => 'El usuario no tiene un rol válido.',
             ]);
+    }
+
+    // 4. Si la autenticación falla, registrar el intento
+    RateLimiter::hit($attemptsKey, 1800);
+
+    if (RateLimiter::tooManyAttempts($attemptsKey, 5)) {
+        RateLimiter::hit($lockoutKey, 30);
+
+        return back()
+            ->withErrors([
+                'email' => 'Alcanzaste 5 intentos incorrectos. Espera 30 segundos antes de volver a intentar.',
+            ])
+            ->with('login_wait_seconds', 30)
+            ->onlyInput('email');
     }
 
     return back()
@@ -78,9 +114,12 @@ Route::post('/logout', function (Request $request) {
 |--------------------------------------------------------------------------
 */
 
-Route::get('/forgot-password', function () {
-    return view('auth.forgot-password');
-})->name('password.request');
+Route::get('/forgot-password', function (Request $request) {
+    $cooldownUntil = (int) $request->session()->get('password_reset_cooldown_until', 0);
+    $resetWaitSeconds = max(0, $cooldownUntil - now()->timestamp);
+
+    return view('auth.forgot-password', compact('resetWaitSeconds'));
+})->middleware(['auth', 'admin'])->name('password.request');
 
 Route::post('/forgot-password', function (Request $request) {
     $request->validate([
@@ -90,18 +129,36 @@ Route::post('/forgot-password', function (Request $request) {
         'email.email' => 'El correo electrónico no es válido.',
     ]);
 
+    $cooldownUntil = (int) $request->session()->get('password_reset_cooldown_until', 0);
+    $waitSeconds = max(0, $cooldownUntil - now()->timestamp);
+
+    if ($waitSeconds > 0) {
+        return back()
+            ->withErrors([
+                'email' => "Espera {$waitSeconds} segundos antes de solicitar otro enlace.",
+            ])
+            ->with('reset_wait_seconds', $waitSeconds)
+            ->onlyInput('email');
+    }
+
+    $request->session()->put('password_reset_cooldown_until', now()->addSeconds(30)->timestamp);
+
     $status = Password::sendResetLink($request->only('email'));
 
     if ($status === Password::RESET_LINK_SENT) {
-        return back()->with('status', 'Te enviamos un enlace para restablecer tu contraseña.');
+        return back()
+            ->with('status', 'Te enviamos un enlace para restablecer tu contraseña.')
+            ->with('reset_wait_seconds', 30)
+            ->withInput();
     }
 
     return back()
         ->withErrors([
-            'email' => 'No encontramos una cuenta con ese correo electrónico.'
+            'email' => 'No encontramos una cuenta con ese correo electrónico.',
         ])
+        ->with('reset_wait_seconds', 30)
         ->withInput();
-})->name('password.email');
+})->middleware(['auth', 'admin'])->name('password.email');
 
 Route::get('/reset-password/{token}', function (string $token, Request $request) {
     return view('auth.reset-password', [
@@ -141,7 +198,7 @@ Route::post('/reset-password', function (Request $request) {
 
     return back()
         ->withErrors([
-            'email' => 'El enlace para restablecer la contraseña no es válido o ya venció.'
+            'email' => 'El enlace para restablecer la contraseña no es válido o ya venció.',
         ])
         ->withInput();
 })->name('password.update');
@@ -171,20 +228,39 @@ Route::middleware(['auth', 'admin'])
 */
 
 Route::middleware(['auth', 'empleado'])
-    ->get('/crear/cobros', function () {
+    ->get('/crear/cobros', function (Request $request) {
         $cobros = Cobros::paginate(10);
-        return view('cobros.cobro', compact('cobros'));
+        $itemsInventario = Inventario::query()
+            ->select('id', 'nombre_item', 'precio', 'stock_actual')
+            ->orderBy('nombre_item')
+            ->get();
+        $cooldownKey = 'charge-receipt:'.$request->user()->getAuthIdentifier();
+        $receiptWaitSeconds = RateLimiter::tooManyAttempts($cooldownKey, 1)
+            ? RateLimiter::availableIn($cooldownKey)
+            : 0;
+
+        return view('cobros.cobro', compact('cobros', 'itemsInventario', 'receiptWaitSeconds'));
     })->name('cobros.empleado');
 
 Route::middleware(['auth', 'admin'])
-    ->get('/admin/crear/cobros', function () {
+    ->get('/admin/crear/cobros', function (Request $request) {
         $cobros = Cobros::paginate(10);
-        return view('cobros.cobro', compact('cobros'));
+        $itemsInventario = Inventario::query()
+            ->select('id', 'nombre_item', 'precio', 'stock_actual')
+            ->orderBy('nombre_item')
+            ->get();
+        $cooldownKey = 'charge-receipt:'.$request->user()->getAuthIdentifier();
+        $receiptWaitSeconds = RateLimiter::tooManyAttempts($cooldownKey, 1)
+            ? RateLimiter::availableIn($cooldownKey)
+            : 0;
+
+        return view('cobros.cobro', compact('cobros', 'itemsInventario', 'receiptWaitSeconds'));
     })->name('cobros.cobros');
 
 Route::middleware(['auth', 'admin'])
     ->get('/cobros', function () {
         $cobros = Cobros::paginate(10);
+
         return view('cobros.index', compact('cobros'));
     })->name('cobros.index');
 
@@ -199,55 +275,79 @@ Route::middleware(['auth', 'admin'])
 */
 
 Route::middleware(['auth', 'admin'])
-    ->get('/admin/empleados/crear', function () {
-        return view('admin.empleados.create');
+    ->get('/admin/empleados/crear', function (Request $request) {
+        $cooldownKey = 'employee-create:'.$request->user()->getAuthIdentifier();
+        $employeeWaitSeconds = RateLimiter::tooManyAttempts($cooldownKey, 1)
+            ? RateLimiter::availableIn($cooldownKey)
+            : 0;
+
+        return view('admin.empleados.create', compact('employeeWaitSeconds'));
     })->name('admin.empleados.create');
-    Route::get('/menu/admin/empleados', [EmpleadoController::class, 'index'])->name('admin.empleados.index');
 
 Route::post('/admin/store', function (Request $request) {
-    $request->validate([
+    $cooldownKey = 'employee-create:'.$request->user()->getAuthIdentifier();
+
+    if (RateLimiter::tooManyAttempts($cooldownKey, 1)) {
+        $waitSeconds = RateLimiter::availableIn($cooldownKey);
+
+        return back()
+            ->withErrors([
+                'employee' => "Espera {$waitSeconds} segundos antes de crear otro empleado.",
+            ])
+            ->with('employee_wait_seconds', $waitSeconds);
+    }
+
+    RateLimiter::hit($cooldownKey, 10);
+
+    $validated = $request->validate([
         'name' => 'required|string|max:255',
         'email' => 'required|string|email|max:255|unique:users',
         'password' => 'required|string|min:6',
     ]);
 
     User::create([
-        'name' => $request->name,
-        'email' => trim($request->email),
-        'password' => Hash::make($request->password),
+        'name' => $validated['name'],
+        'email' => trim($validated['email']),
+        'password' => Hash::make($validated['password']),
         'rol' => 'empleado',
     ]);
 
     return redirect()->route('admin.menu');
-})->name('admin.empleados.store');
+})->middleware(['auth', 'admin'])->name('admin.empleados.store');
 
 /*
 |--------------------------------------------------------------------------
 | RUTAS DEL INVENTARIO
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'admin'])
-    ->get('/menu/admin', [InventarioController::class, 'index'])
-    ->name('admin.menu');
 
-// 2. Grupo para las acciones específicas del inventario
-Route::middleware(['auth', 'admin'])->prefix('menu/admin')->name('inventario.')->group(function () {
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::get('/inventario/crear', function (Request $request) {
+        $cooldownKey = 'inventory-save:'.$request->user()->getAuthIdentifier();
+        $saveWaitSeconds = RateLimiter::tooManyAttempts($cooldownKey, 1)
+            ? RateLimiter::availableIn($cooldownKey)
+            : 0;
 
-    // Vista o formulario de creación
-    Route::get('/crear', function () {
-        return view('admin.inventario');
-    })->name('crear');
+        return view('admin.inventario', compact('saveWaitSeconds'));
+    })->name('inventario.crear');
 
-    Route::get('/inventario/{id}/editar', [InventarioController::class, 'edit'])->name('editar');
+    Route::get('/inventario/editar', function (Request $request) {
+        $cooldownKey = 'inventory-save:'.$request->user()->getAuthIdentifier();
+        $saveWaitSeconds = RateLimiter::tooManyAttempts($cooldownKey, 1)
+            ? RateLimiter::availableIn($cooldownKey)
+            : 0;
 
-    // Guardar el nuevo ítem
-    Route::post('/', [InventarioController::class, 'store'])->name('store');
+        return view('admin.inventario', compact('saveWaitSeconds'));
+    })->name('inventario.editar');
 
-    Route::patch('/{id}/uso', [InventarioController::class, 'uso'])->name('uso');
-    Route::delete('/{id}', [InventarioController::class, 'destroy'])->name('destroy');
+    Route::patch('/menu/admin/inventario/{id}/uso', [InventarioController::class, 'uso'])->name('inventario.uso');
+
+    Route::get('/menu/admin/inventario', [InventarioController::class, 'index'])->name('inventario.index');
+
+    Route::post('/menu/admin/inventario', [InventarioController::class, 'store'])->name('inventario.store');
+
+    Route::delete('/menu/admin/inventario/{id}', [InventarioController::class, 'destroy'])->name('inventario.destroy');
 });
-
-
 
 /*
 |--------------------------------------------------------------------------
@@ -289,3 +389,6 @@ Route::middleware(['auth'])->prefix('menu/admin')->name('admin.')->group(functio
     Route::delete('/empleados/{id}', [EmpleadoController::class, 'destroy'])->name('empleados.destroy');
 });
 
+Route::post('/cobro/store', [CobrosController::class, 'store'])
+    ->middleware('auth')
+    ->name('cobros.store');

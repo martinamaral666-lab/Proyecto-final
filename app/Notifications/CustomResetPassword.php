@@ -37,7 +37,7 @@ class CustomResetPassword extends Notification
                 'user' => $notifiable,
                 'url' => $this->resetUrl($notifiable),
                 'expire' => config(
-                    'auth.passwords.' . config('auth.defaults.passwords') . '.expire'
+                    'auth.passwords.'.config('auth.defaults.passwords').'.expire'
                 ),
             ]);
     }
