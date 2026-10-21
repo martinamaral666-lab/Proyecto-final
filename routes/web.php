@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\CobrosController;
+use App\Http\Controllers\InfoClienteController;
+use App\Http\Controllers\EmpleadoController;
 use App\Http\Controllers\InventarioController;
 use App\Http\Controllers\Admin\CuentaController;
 use App\Models\User;
@@ -200,6 +202,7 @@ Route::middleware(['auth', 'admin'])
     ->get('/admin/empleados/crear', function () {
         return view('admin.empleados.create');
     })->name('admin.empleados.create');
+    Route::get('/menu/admin/empleados', [EmpleadoController::class, 'index'])->name('admin.empleados.index');
 
 Route::post('/admin/store', function (Request $request) {
     $request->validate([
@@ -223,24 +226,28 @@ Route::post('/admin/store', function (Request $request) {
 | RUTAS DEL INVENTARIO
 |--------------------------------------------------------------------------
 */
+Route::middleware(['auth', 'admin'])
+    ->get('/menu/admin', [InventarioController::class, 'index'])
+    ->name('admin.menu');
 
-Route::middleware(['auth', 'admin'])->group(function () {
-    Route::get('/inventario/crear', function () {
+// 2. Grupo para las acciones específicas del inventario
+Route::middleware(['auth', 'admin'])->prefix('menu/admin')->name('inventario.')->group(function () {
+
+    // Vista o formulario de creación
+    Route::get('/crear', function () {
         return view('admin.inventario');
-    })->name('inventario.crear');
+    })->name('crear');
 
-    Route::get('/inventario/editar', function () {
-        return view('admin.inventario');
-    })->name('inventario.editar');
+    Route::get('/inventario/{id}/editar', [InventarioController::class, 'edit'])->name('editar');
 
-    Route::patch('/menu/admin/inventario/{id}/uso', [InventarioController::class, 'uso'])->name('inventario.uso');
+    // Guardar el nuevo ítem
+    Route::post('/', [InventarioController::class, 'store'])->name('store');
 
-    Route::get('/menu/admin/inventario', [InventarioController::class, 'index'])->name('inventario.index');
-
-    Route::post('/menu/admin/inventario', [InventarioController::class, 'store'])->name('inventario.store');
-
-    Route::delete('/menu/admin/inventario/{id}', [InventarioController::class, 'destroy'])->name('inventario.destroy');
+    Route::patch('/{id}/uso', [InventarioController::class, 'uso'])->name('uso');
+    Route::delete('/{id}', [InventarioController::class, 'destroy'])->name('destroy');
 });
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -249,3 +256,36 @@ Route::middleware(['auth', 'admin'])->group(function () {
 */
 
 Route::post('/cobro/store', [CobrosController::class, 'store'])->name('cobros.store');
+
+
+/*
+|--------------------------------------------------------------------------
+| informacion de clientes
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth'])->prefix('menu/admin')->name('admin.')->group(function () {
+    Route::get('/infodeclientes', [InfoClienteController::class, 'index'])->name('infodeclientes.index');
+    Route::get('/infodeclientes/{id}', [InfoClienteController::class, 'show'])->name('infodeclientes.show');
+    Route::get('/infodeclientes/{id}/edit', [InfoClienteController::class, 'edit'])->name('infodeclientes.edit');
+    Route::put('/infodeclientes/{id}', [InfoClienteController::class, 'update'])->name('infodeclientes.update');
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| listado de empleados
+|--------------------------------------------------------------------------
+*/
+
+
+Route::middleware(['auth'])->prefix('menu/admin')->name('admin.')->group(function () {
+    // Rutas de Empleados protegidas
+    Route::get('/empleados', [EmpleadoController::class, 'index'])->name('empleados.index');
+    Route::get('/empleados/create', [EmpleadoController::class, 'create'])->name('empleados.create');
+    Route::post('/empleados', [EmpleadoController::class, 'store'])->name('empleados.store');
+    Route::get('/empleados/{id}/edit', [EmpleadoController::class, 'edit'])->name('empleados.edit');
+    Route::put('/empleados/{id}', [EmpleadoController::class, 'update'])->name('empleados.update');
+    Route::delete('/empleados/{id}', [EmpleadoController::class, 'destroy'])->name('empleados.destroy');
+});
+

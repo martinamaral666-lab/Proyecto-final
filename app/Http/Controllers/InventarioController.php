@@ -34,15 +34,16 @@ class InventarioController extends Controller {
 
         Inventario::create($request->all());
 
-        return redirect()->route('inventario.index')->with('success', 'Ítem agregado correctamente.');
+        return redirect()->route('admin.menu')->with('success', 'Ítem agregado correctamente.');
     }
 
     public function destroy($id) {
-        $item = Inventario::findOrFail($id);
-        $item->delete();
+    $item = Inventario::findOrFail($id);
+    $item->delete();
 
-        return redirect()->route('inventario.index')->with('success', 'Ítem eliminado.');
-    }
+    // Cambiar 'admin.inventario' por una ruta existente
+    return redirect()->route('admin.menu')->with('success', 'Ítem eliminado.');
+}
 
     public function uso($id)
 {
@@ -53,5 +54,13 @@ class InventarioController extends Controller {
     $item->save();
 
     return redirect()->back()->with('el item esta en uso.');
+}
+public function edit($id)
+{
+    // Busca el registro en la base de datos
+    $item = Inventario::findOrFail($id);
+
+    // Retorna la vista (asegúrate de que sea la correcta para editar)
+    return view('admin.inventario', compact('item'));
 }
 }

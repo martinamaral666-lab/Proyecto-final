@@ -10,7 +10,7 @@ class Cliente extends Model
     /** @use HasFactory<\Database\Factories\ClienteFactory> */
     use HasFactory;
 
-    protected $fillable = ['nombre', 'telefono', 'direccion'];
+   protected $fillable = ['nombre', 'telefono', 'direccion', 'email'];
     public function cobros()
     {
         return $this->hasMany(cobros::class);

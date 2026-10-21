@@ -22,7 +22,7 @@
                         Acciones Principales
                     </div>
 
-                    <a href="{{ route('inventario.index') }}" class="flex items-center px-3 py-2.5 rounded-xl bg-emerald-800 text-white font-medium transition-colors">
+                    <a href="{{ route('admin.menu') }}" class="flex items-center px-3 py-2.5 rounded-xl bg-emerald-800 text-white font-medium transition-colors">
                         Inventario General
                     </a>
                 </div>
@@ -88,7 +88,7 @@
                             </div>
 
                             <div class="flex justify-end gap-3 mt-6">
-                                <a href="{{ route('inventario.index') }}" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors">Cancelar</a>
+                                <a href="{{ route('admin.menu') }}" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors">Cancelar</a>
                                 <button type="submit" class="px-4 py-2 bg-emerald-800 text-white rounded-lg hover:bg-emerald-900 transition-colors">Guardar Ítem</button>
                             </div>
                         </form>
