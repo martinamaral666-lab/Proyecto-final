@@ -174,10 +174,12 @@
 
                 <button
                     type="submit"
-                    class="w-full bg-[#044e39] hover:bg-[#033b2b] text-white font-semibold px-6 py-3 rounded-lg shadow transition"
-                >
+                    class="w-full bg-[#044e39] hover:bg-[#033b2b] text-white font-semibold px-6 py-3 rounded-lg shadow transition"                                   
+                    >
                     Cambiar contraseña
+                
                 </button>
+
 
 
             </form>
@@ -188,6 +190,7 @@
 
             <div class="text-center mt-6">
 
+<<<<<<< HEAD
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button
@@ -197,6 +200,14 @@
                         Volver al inicio de sesión
                     </button>
                 </form>
+=======
+                <a
+                    href="{{ route('login') }}"
+                    class="text-sm font-semibold text-emerald-700 hover:text-emerald-900 hover:underline"
+                    >
+                    Volver al inicio de sesión
+                </a>
+>>>>>>> remotes/origin/administrador-de-cuenta-de-admin
 
             </div>
 

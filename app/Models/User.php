@@ -2,29 +2,25 @@
 
 namespace App\Models;
 
-<<<<<<< HEAD
+
 use Database\Factories\UserFactory;
-=======
+
+namespace App\Models;
+
 use App\Notifications\CustomResetPassword;
->>>>>>> remotes/origin/Proteccion-de-rutas
-use Illuminate\Auth\Passwords\CanResetPassword;
-use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
-use App\Notifications\CustomResetPassword;
 
 class User extends Authenticatable implements CanResetPasswordContract
 {
-<<<<<<< HEAD
     use HasFactory, Notifiable, CanResetPassword;
 
-=======
+
     use CanResetPassword, HasFactory, Notifiable;
->>>>>>> remotes/origin/Proteccion-de-rutas
+
 
     /**
      * @property int $id
@@ -37,6 +33,7 @@ class User extends Authenticatable implements CanResetPasswordContract
      * @property Carbon|null $created_at
      * @property Carbon|null $updated_at
      */
+
     #[Fillable([
         'name',
         'email',
@@ -49,6 +46,7 @@ class User extends Authenticatable implements CanResetPasswordContract
         'password',
         'remember_token',
     ])]
+
     protected $fillable = [
         'name',
         'email',
@@ -56,7 +54,6 @@ class User extends Authenticatable implements CanResetPasswordContract
         'rol',
         'telefono',
     ];
-
 
     protected function casts(): array
     {
@@ -73,7 +70,8 @@ class User extends Authenticatable implements CanResetPasswordContract
 
     public function Cobros()
     {
-        return $this->hasMany(Cobros::class, 'User_id');
+        $this->notify(new CustomResetPassword($token));
+        return $this->hasMany(Cobros::class, 'user_id');
     }
 }
-}
+

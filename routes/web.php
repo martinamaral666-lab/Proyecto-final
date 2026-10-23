@@ -91,7 +91,6 @@ Route::post('/login-process', function (Request $request) {
             'email' => 'Los datos ingresados son incorrectos.',
         ])
         ->onlyInput('email');
-
 })->name('login.post');
 
 /*
@@ -146,10 +145,17 @@ Route::post('/forgot-password', function (Request $request) {
     $status = Password::sendResetLink($request->only('email'));
 
     if ($status === Password::RESET_LINK_SENT) {
+<<<<<<< HEAD
         return back()
             ->with('status', 'Te enviamos un enlace para restablecer tu contraseña.')
             ->with('reset_wait_seconds', 30)
             ->withInput();
+=======
+        return back()->with(
+            'status',
+            'Te enviamos un enlace para restablecer tu contraseña.'
+        );
+>>>>>>> remotes/origin/administrador-de-cuenta-de-admin
     }
 
     return back()
@@ -181,7 +187,12 @@ Route::post('/reset-password', function (Request $request) {
     ]);
 
     $status = Password::reset(
-        $request->only('email', 'password', 'password_confirmation', 'token'),
+        $request->only(
+            'email',
+            'password',
+            'password_confirmation',
+            'token'
+        ),
         function (User $user, string $password) {
             $user->forceFill([
                 'password' => Hash::make($password),
@@ -191,9 +202,16 @@ Route::post('/reset-password', function (Request $request) {
     );
 
     if ($status === Password::PASSWORD_RESET) {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
         return redirect()
             ->route('login')
-            ->with('success', 'Tu contraseña fue restablecida correctamente. Ya podés iniciar sesión.');
+            ->with(
+                'success',
+                'Tu contraseña fue restablecida correctamente. Ya podés iniciar sesión.'
+            );
     }
 
     return back()
@@ -230,6 +248,7 @@ Route::middleware(['auth', 'admin'])
 Route::middleware(['auth', 'empleado'])
     ->get('/crear/cobros', function (Request $request) {
         $cobros = Cobros::paginate(10);
+<<<<<<< HEAD
         $itemsInventario = Inventario::query()
             ->select('id', 'nombre_item', 'precio', 'stock_actual')
             ->orderBy('nombre_item')
@@ -240,11 +259,16 @@ Route::middleware(['auth', 'empleado'])
             : 0;
 
         return view('cobros.cobro', compact('cobros', 'itemsInventario', 'receiptWaitSeconds'));
+=======
+
+        return view('cobros.cobro', compact('cobros'));
+>>>>>>> remotes/origin/administrador-de-cuenta-de-admin
     })->name('cobros.empleado');
 
 Route::middleware(['auth', 'admin'])
     ->get('/admin/crear/cobros', function (Request $request) {
         $cobros = Cobros::paginate(10);
+<<<<<<< HEAD
         $itemsInventario = Inventario::query()
             ->select('id', 'nombre_item', 'precio', 'stock_actual')
             ->orderBy('nombre_item')
@@ -255,6 +279,10 @@ Route::middleware(['auth', 'admin'])
             : 0;
 
         return view('cobros.cobro', compact('cobros', 'itemsInventario', 'receiptWaitSeconds'));
+=======
+
+        return view('cobros.cobro', compact('cobros'));
+>>>>>>> remotes/origin/administrador-de-cuenta-de-admin
     })->name('cobros.cobros');
 
 Route::middleware(['auth', 'admin'])
@@ -340,13 +368,25 @@ Route::middleware(['auth', 'admin'])->group(function () {
         return view('admin.inventario', compact('saveWaitSeconds'));
     })->name('inventario.editar');
 
-    Route::patch('/menu/admin/inventario/{id}/uso', [InventarioController::class, 'uso'])->name('inventario.uso');
+    Route::patch(
+        '/menu/admin/inventario/{id}/uso',
+        [InventarioController::class, 'uso']
+    )->name('inventario.uso');
 
-    Route::get('/menu/admin/inventario', [InventarioController::class, 'index'])->name('inventario.index');
+    Route::get(
+        '/menu/admin/inventario',
+        [InventarioController::class, 'index']
+    )->name('inventario.index');
 
-    Route::post('/menu/admin/inventario', [InventarioController::class, 'store'])->name('inventario.store');
+    Route::post(
+        '/menu/admin/inventario',
+        [InventarioController::class, 'store']
+    )->name('inventario.store');
 
-    Route::delete('/menu/admin/inventario/{id}', [InventarioController::class, 'destroy'])->name('inventario.destroy');
+    Route::delete(
+        '/menu/admin/inventario/{id}',
+        [InventarioController::class, 'destroy']
+    )->name('inventario.destroy');
 });
 
 /*
@@ -355,6 +395,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
 |--------------------------------------------------------------------------
 */
 
+<<<<<<< HEAD
 Route::post('/cobro/store', [CobrosController::class, 'store'])->name('cobros.store');
 
 
@@ -392,3 +433,11 @@ Route::middleware(['auth'])->prefix('menu/admin')->name('admin.')->group(functio
 Route::post('/cobro/store', [CobrosController::class, 'store'])
     ->middleware('auth')
     ->name('cobros.store');
+=======
+Route::middleware(['auth'])
+    ->post(
+        '/cobro/store',
+        [CobrosController::class, 'store']
+    )
+    ->name('cobros.store');
+>>>>>>> remotes/origin/administrador-de-cuenta-de-admin

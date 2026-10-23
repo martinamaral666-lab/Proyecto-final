@@ -11,7 +11,7 @@
     <div class="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden">
         <!-- HEADER -->
         <div class="bg-emerald-800 text-white p-6 text-center">
-            <img src="{{ asset('imagenes/logo listo 3.png') }}" alt="Logo GestiónCash" class="w-16 h-16 object-contain mx-auto mb-3 rounded-xl bg-white/10 p-2">
+            <img src="{{ asset('imagenes/logo.png') }}" alt="Logo GestiónCash" class="w-16 h-16 object-contain mx-auto mb-3 rounded-xl bg-white/10 p-2">
             <h1 class="text-xl font-bold">Registrar Cobro</h1>
             <p class="text-xs text-emerald-100 mt-1">Ingresa los datos del pago recibido</p>
         </div>
@@ -31,26 +31,52 @@
             <!-- NOMBRE CLIENTE -->
             <div>
                 <label for="nombre_cliente" class="block text-xs font-bold uppercase text-gray-600 mb-1">Nombre del Cliente</label>
-                <input type="text" name="nombre_cliente" id="nombre_cliente" required placeholder="Ej. Juan Pérez"
-                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600">
+                <input
+                    type="text"
+                    name="nombre_cliente"
+                    id="nombre_cliente"
+                    required
+                    placeholder="Ej. Juan Pérez"
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                >
             </div>
 
             <!-- TELÉFONO -->
             <div>
+<<<<<<< HEAD
               <label for="telefono" class="block text-xs font-bold uppercase text-gray-600 mb-1">Teléfono (WhatsApp)</label>
               <input type="tel" name="telefono" id="telefono" required placeholder="Ej. 099123456"
               class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600">
            </div>
 
             @include('cobros._inventario')
+=======
+                <label for="telefono" class="block text-xs font-bold uppercase text-gray-600 mb-1">Teléfono (WhatsApp)</label>
+                <input
+                    type="tel"
+                    name="telefono"
+                    id="telefono"
+                    required
+                    placeholder="Ej. 099123456"
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                >
+            </div>
+>>>>>>> remotes/origin/administrador-de-cuenta-de-admin
 
             <!-- CONCEPTO -->
             <div>
                 <label for="concepto" class="block text-xs font-bold uppercase text-gray-600 mb-1">Concepto</label>
-                <input type="text" name="concepto" id="concepto" required placeholder="Ej. Cuota de servicio"
-                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600">
+                <input
+                    type="text"
+                    name="concepto"
+                    id="concepto"
+                    required
+                    placeholder="Ej. Cuota de servicio"
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                >
             </div>
 
+<<<<<<< HEAD
             <!-- ¿SE REALIZÓ LA MANO DE OBRA? -->
             <div>
                 <div class="mb-2 border-b-2 border-gray-200 pb-1 text-sm font-bold uppercase tracking-wide text-emerald-700">
@@ -59,6 +85,53 @@
                 <label for="mano_de_obra" class="block text-xs font-bold uppercase text-gray-600 mb-1">¿Se realizó la mano de obra?</label>
                 <select name="mano_de_obra" id="mano_de_obra" onchange="toggleMotivo(this.value)" required
                     class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600">
+=======
+            <!-- MONTO -->
+            <div>
+                <label for="monto" class="block text-xs font-bold uppercase text-gray-600 mb-1">Monto ($)</label>
+                <input
+                    type="number"
+                    step="0.01"
+                    name="monto"
+                    id="monto"
+                    required
+                    placeholder="0.00"
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                >
+            </div>
+
+            <!-- MEDIO DE PAGO -->
+            <div>
+                <label for="metodo_pago" class="block text-xs font-bold uppercase text-gray-600 mb-1">
+                    Medio de pago
+                </label>
+
+                <select
+                    name="metodo_pago"
+                    id="metodo_pago"
+                    required
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600"
+                >
+                    <option value="" disabled selected>Seleccioná un medio de pago</option>
+                    <option value="efectivo">💵 Efectivo</option>
+                    <option value="tarjeta">💳 Tarjeta</option>
+                </select>
+            </div>
+
+            <!-- ¿SE REALIZÓ LA MANO DE OBRA? -->
+            <div>
+                <label for="mano_de_obra" class="block text-xs font-bold uppercase text-gray-600 mb-1">
+                    ¿Se realizó la mano de obra?
+                </label>
+
+                <select
+                    name="mano_de_obra"
+                    id="mano_de_obra"
+                    onchange="toggleMotivo(this.value)"
+                    required
+                    class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-emerald-600"
+                >
+>>>>>>> remotes/origin/administrador-de-cuenta-de-admin
                     <option value="si" selected>Sí, realizada</option>
                     <option value="no">No realizada</option>
                 </select>
@@ -81,17 +154,32 @@
 
             <!-- MOTIVO POR EL CUAL NO SE REALIZÓ (OCULTO POR DEFECTO) -->
             <div id="campo_motivo" class="hidden">
-                <label for="motivo_no_realizado" class="block text-xs font-bold uppercase text-red-600 mb-1">Motivo por el cual no se realizó</label>
-                <textarea name="motivo_no_realizado" id="motivo_no_realizado" rows="2" placeholder="Explica la razón..."
-                    class="w-full bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-red-500"></textarea>
+                <label for="motivo_no_realizado" class="block text-xs font-bold uppercase text-red-600 mb-1">
+                    Motivo por el cual no se realizó
+                </label>
+
+                <textarea
+                    name="motivo_no_realizado"
+                    id="motivo_no_realizado"
+                    rows="2"
+                    placeholder="Explica la razón..."
+                    class="w-full bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 text-sm text-gray-800 focus:outline-none focus:border-red-500"
+                ></textarea>
             </div>
 
             <!-- BOTONES -->
             <div class="pt-2 space-y-2">
-                <button type="submit" class="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-bold py-3 rounded-xl transition shadow-md">
+                <button
+                    type="submit"
+                    class="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-bold py-3 rounded-xl transition shadow-md"
+                >
                     Guardar y Generar Recibo
                 </button>
-                <a href="/admin/menu" class="block text-center w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm transition">
+
+                <a
+                    href="/admin/menu"
+                    class="block text-center w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-semibold py-2.5 rounded-xl text-sm transition"
+                >
                     Cancelar
                 </a>
             </div>
@@ -103,8 +191,12 @@
     <script>
         function toggleMotivo(valor) {
             const campoMotivo = document.getElementById('campo_motivo');
+<<<<<<< HEAD
             const grupoMontoManual = document.getElementById('grupo-monto-manual');
             const montoManual = document.getElementById('monto_base');
+=======
+
+>>>>>>> remotes/origin/administrador-de-cuenta-de-admin
             if (valor === 'no') {
                 campoMotivo.classList.remove('hidden');
                 grupoMontoManual.classList.add('hidden');
@@ -120,3 +212,4 @@
 
 </body>
 </html>
+
