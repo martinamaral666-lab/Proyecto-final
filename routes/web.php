@@ -1,11 +1,13 @@
 <?php
 
+use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Admin\CuentaController;
 use App\Http\Controllers\CobrosController;
 use App\Http\Controllers\InfoClienteController;
 use App\Http\Controllers\EmpleadoController;
 use App\Http\Controllers\InventarioController;
 use App\Models\User;
+use Inertia\Inertia;
 use App\Models\Cobros;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,6 +16,7 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use App\Models\Inventario;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,8 +24,18 @@ use Illuminate\Support\Str;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', function () {
-    return view('auth.login');
+Route::get('/', function (Request $request) {
+    $ipKey = 'login-lockout-ip:'.$request->ip();
+    $loginWaitSeconds = RateLimiter::tooManyAttempts($ipKey, 1)
+        ? RateLimiter::availableIn($ipKey)
+        : 0;
+
+    return Inertia::render('admin/auth/login', [
+        'loginWaitSeconds' => $loginWaitSeconds,
+        'routes' => [
+            'loginPost' => route('login.post'),
+        ]
+    ]);
 })->name('login');
 
 Route::post('/login-process', function (Request $request) {
@@ -31,14 +44,16 @@ Route::post('/login-process', function (Request $request) {
         'password' => ['required'],
     ]);
 
-    // 1. Generar las llaves del rate limiter antes de evaluar la autenticación
     $identifier = hash('sha256', strtolower(trim($credentials['email'])).'|'.$request->ip());
     $attemptsKey = 'login-attempts:'.$identifier;
     $lockoutKey = 'login-lockout:'.$identifier;
+    $ipKey = 'login-lockout-ip:'.$request->ip();
 
-    // 2. Verificar si el usuario está bloqueado temporalmente
-    if (RateLimiter::tooManyAttempts($lockoutKey, 1)) {
-        $waitSeconds = RateLimiter::availableIn($lockoutKey);
+    if (RateLimiter::tooManyAttempts($lockoutKey, 1) || RateLimiter::tooManyAttempts($ipKey, 1)) {
+        $waitSeconds = max(
+            RateLimiter::availableIn($lockoutKey),
+            RateLimiter::availableIn($ipKey)
+        );
 
         return back()
             ->withErrors([
@@ -48,18 +63,20 @@ Route::post('/login-process', function (Request $request) {
             ->onlyInput('email');
     }
 
-    // 3. Intentar iniciar sesión
     if (Auth::attempt($credentials)) {
         RateLimiter::clear($attemptsKey);
         RateLimiter::clear($lockoutKey);
+        RateLimiter::clear($ipKey);
         $request->session()->regenerate();
         $user = Auth::user();
 
-        if ($user->rol === 'admin') {
+        $role = $user->role ?? $user->rol ?? '';
+
+        if ($role === 'admin') {
             return redirect()->route('admin.menu');
         }
 
-        if ($user->rol === 'empleado') {
+        if ($role === 'empleado') {
             return redirect()->route('cobros.empleado');
         }
 
@@ -72,11 +89,11 @@ Route::post('/login-process', function (Request $request) {
             ]);
     }
 
-    // 4. Si la autenticación falla, registrar el intento
     RateLimiter::hit($attemptsKey, 1800);
 
     if (RateLimiter::tooManyAttempts($attemptsKey, 5)) {
         RateLimiter::hit($lockoutKey, 30);
+        RateLimiter::hit($ipKey, 30);
 
         return back()
             ->withErrors([
@@ -113,11 +130,12 @@ Route::post('/logout', function (Request $request) {
 |--------------------------------------------------------------------------
 */
 
+
 Route::get('/forgot-password', function (Request $request) {
     $cooldownUntil = (int) $request->session()->get('password_reset_cooldown_until', 0);
     $resetWaitSeconds = max(0, $cooldownUntil - now()->timestamp);
 
-    return view('auth.forgot-password', compact('resetWaitSeconds'));
+    return Inertia::render('admin/auth/forgot-password', compact('resetWaitSeconds'));
 })->middleware(['auth', 'admin'])->name('password.request');
 
 Route::post('/forgot-password', function (Request $request) {
@@ -142,34 +160,41 @@ Route::post('/forgot-password', function (Request $request) {
 
     $request->session()->put('password_reset_cooldown_until', now()->addSeconds(30)->timestamp);
 
-    $status = Password::sendResetLink($request->only('email'));
+    try {
+        $status = Password::sendResetLink($request->only('email'));
+    } catch (\Throwable $e) {
+        Log::error('Error al enviar el correo de recuperación: ' . $e->getMessage());
+
+        return back()
+            ->withErrors([
+                'email' => 'No pudimos enviar el correo. Revisá la configuración de correo del servidor.',
+            ])
+            ->withInput();
+    }
 
     if ($status === Password::RESET_LINK_SENT) {
-<<<<<<< HEAD
-        return back()
-            ->with('status', 'Te enviamos un enlace para restablecer tu contraseña.')
-            ->with('reset_wait_seconds', 30)
-            ->withInput();
-=======
         return back()->with(
             'status',
             'Te enviamos un enlace para restablecer tu contraseña.'
         );
->>>>>>> remotes/origin/administrador-de-cuenta-de-admin
     }
 
+    $mensaje = match ($status) {
+        Password::INVALID_USER => 'No encontramos una cuenta con ese correo electrónico.',
+        Password::RESET_THROTTLED => 'Ya se envió un enlace hace poco. Esperá un momento antes de pedir otro.',
+        default => 'No se pudo enviar el enlace. Intentá de nuevo.',
+    };
+
     return back()
-        ->withErrors([
-            'email' => 'No encontramos una cuenta con ese correo electrónico.',
-        ])
+        ->withErrors(['email' => $mensaje])
         ->with('reset_wait_seconds', 30)
         ->withInput();
 })->middleware(['auth', 'admin'])->name('password.email');
 
 Route::get('/reset-password/{token}', function (string $token, Request $request) {
-    return view('auth.reset-password', [
+    return Inertia::render('admin/auth/reset-password', [
         'token' => $token,
-        'email' => $request->email,
+        'email' => (string) $request->query('email', ''),
     ]);
 })->name('password.reset');
 
@@ -228,8 +253,12 @@ Route::post('/reset-password', function (Request $request) {
 */
 
 Route::middleware(['auth', 'admin'])
-    ->get('/menu/admin', [CobrosController::class, 'adminmenu'])
+    ->get('/menu/admin', [InventarioController::class, 'index'])
     ->name('admin.menu');
+
+Route::middleware(['auth', 'admin'])
+    ->get('/menu/admin/inventario', [InventarioController::class, 'index'])
+    ->name('inventario.index');
 
 Route::middleware(['auth', 'admin'])
     ->get('/admin/cuenta', [CuentaController::class, 'edit'])
@@ -248,7 +277,6 @@ Route::middleware(['auth', 'admin'])
 Route::middleware(['auth', 'empleado'])
     ->get('/crear/cobros', function (Request $request) {
         $cobros = Cobros::paginate(10);
-<<<<<<< HEAD
         $itemsInventario = Inventario::query()
             ->select('id', 'nombre_item', 'precio', 'stock_actual')
             ->orderBy('nombre_item')
@@ -258,17 +286,12 @@ Route::middleware(['auth', 'empleado'])
             ? RateLimiter::availableIn($cooldownKey)
             : 0;
 
-        return view('cobros.cobro', compact('cobros', 'itemsInventario', 'receiptWaitSeconds'));
-=======
-
-        return view('cobros.cobro', compact('cobros'));
->>>>>>> remotes/origin/administrador-de-cuenta-de-admin
+        return Inertia::render('admin/cobros/cobro', compact('cobros', 'itemsInventario', 'receiptWaitSeconds'));
     })->name('cobros.empleado');
 
 Route::middleware(['auth', 'admin'])
     ->get('/admin/crear/cobros', function (Request $request) {
         $cobros = Cobros::paginate(10);
-<<<<<<< HEAD
         $itemsInventario = Inventario::query()
             ->select('id', 'nombre_item', 'precio', 'stock_actual')
             ->orderBy('nombre_item')
@@ -278,24 +301,35 @@ Route::middleware(['auth', 'admin'])
             ? RateLimiter::availableIn($cooldownKey)
             : 0;
 
-        return view('cobros.cobro', compact('cobros', 'itemsInventario', 'receiptWaitSeconds'));
-=======
-
-        return view('cobros.cobro', compact('cobros'));
->>>>>>> remotes/origin/administrador-de-cuenta-de-admin
+        return Inertia::render('admin/cobros/cobro', compact('cobros', 'itemsInventario', 'receiptWaitSeconds'));
     })->name('cobros.cobros');
 
 Route::middleware(['auth', 'admin'])
-    ->get('/cobros', function () {
-        $cobros = Cobros::paginate(10);
+    ->get('/cobros', function (Request $request) {
+        $cobros = Cobros::query()
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $search = $request->search;
 
-        return view('cobros.index', compact('cobros'));
+                $query->where(function ($q) use ($search) {
+                    $q->where('nombre_cliente', 'like', "%{$search}%")
+                      ->orWhere('telefono', 'like', "%{$search}%")
+                      ->orWhere('concepto', 'like', "%{$search}%");
+                });
+            })
+            ->latest()
+            // withQueryString() hace que al pasar de página se mantenga la búsqueda
+            ->paginate(10)
+            ->withQueryString();
+
+        return Inertia::render('admin/cobros/index', [
+            'cobros' => $cobros,
+            'filters' => $request->only('search'),
+        ]);
     })->name('cobros.index');
 
 Route::middleware(['auth', 'admin'])
     ->get('/cobros/{cobro}/pdf', [CobrosController::class, 'pdf'])
     ->name('cobros.pdf');
-
 /*
 |--------------------------------------------------------------------------
 | EMPLEADOS (ADMIN)
@@ -303,16 +337,16 @@ Route::middleware(['auth', 'admin'])
 */
 
 Route::middleware(['auth', 'admin'])
-    ->get('/admin/empleados/crear', function (Request $request) {
+    ->get('/admin/empleados/create', function (Request $request) {
         $cooldownKey = 'employee-create:'.$request->user()->getAuthIdentifier();
         $employeeWaitSeconds = RateLimiter::tooManyAttempts($cooldownKey, 1)
             ? RateLimiter::availableIn($cooldownKey)
             : 0;
 
-        return view('admin.empleados.create', compact('employeeWaitSeconds'));
+        return Inertia::render('admin/empleados/create', compact('employeeWaitSeconds'));
     })->name('admin.empleados.create');
 
-Route::post('/admin/store', function (Request $request) {
+Route::post('/admin/empleados/store', function (Request $request) {
     $cooldownKey = 'employee-create:'.$request->user()->getAuthIdentifier();
 
     if (RateLimiter::tooManyAttempts($cooldownKey, 1)) {
@@ -350,43 +384,20 @@ Route::post('/admin/store', function (Request $request) {
 */
 
 Route::middleware(['auth', 'admin'])->group(function () {
-    Route::get('/inventario/crear', function (Request $request) {
-        $cooldownKey = 'inventory-save:'.$request->user()->getAuthIdentifier();
-        $saveWaitSeconds = RateLimiter::tooManyAttempts($cooldownKey, 1)
-            ? RateLimiter::availableIn($cooldownKey)
-            : 0;
 
-        return view('admin.inventario', compact('saveWaitSeconds'));
-    })->name('inventario.crear');
+    // Vistas y formularios (apuntando al controlador)
+    Route::get('/inventario/crear', [InventarioController::class, 'create'])->name('inventario.crear');
+    Route::get('/inventario/{id}/editar', [InventarioController::class, 'edit'])->name('inventario.editar');
 
-    Route::get('/inventario/editar', function (Request $request) {
-        $cooldownKey = 'inventory-save:'.$request->user()->getAuthIdentifier();
-        $saveWaitSeconds = RateLimiter::tooManyAttempts($cooldownKey, 1)
-            ? RateLimiter::availableIn($cooldownKey)
-            : 0;
+    // Gestión de datos del inventario
+    Route::get('/menu/admin/inventario', [InventarioController::class, 'index'])->name('inventario.index');
+    Route::post('/menu/admin/inventario', [InventarioController::class, 'store'])->name('inventario.store');
 
-        return view('admin.inventario', compact('saveWaitSeconds'));
-    })->name('inventario.editar');
+    // Acciones sobre ítems específicos
+    Route::patch('/inventario/{id}/uso', [InventarioController::class, 'uso'])->name('inventario.uso');
+    Route::delete('/inventario/{id}', [InventarioController::class, 'destroy'])->name('inventario.destroy');
 
-    Route::patch(
-        '/menu/admin/inventario/{id}/uso',
-        [InventarioController::class, 'uso']
-    )->name('inventario.uso');
-
-    Route::get(
-        '/menu/admin/inventario',
-        [InventarioController::class, 'index']
-    )->name('inventario.index');
-
-    Route::post(
-        '/menu/admin/inventario',
-        [InventarioController::class, 'store']
-    )->name('inventario.store');
-
-    Route::delete(
-        '/menu/admin/inventario/{id}',
-        [InventarioController::class, 'destroy']
-    )->name('inventario.destroy');
+    Route::put('/inventario/{id}', [InventarioController::class, 'update'])->name('inventario.update');
 });
 
 /*
@@ -395,8 +406,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
 |--------------------------------------------------------------------------
 */
 
-<<<<<<< HEAD
-Route::post('/cobro/store', [CobrosController::class, 'store'])->name('cobros.store');
+Route::post('/cobros', [CobrosController::class, 'store'])
+    ->middleware('auth')
+    ->name('cobros.store');
 
 
 /*
@@ -405,7 +417,7 @@ Route::post('/cobro/store', [CobrosController::class, 'store'])->name('cobros.st
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth'])->prefix('menu/admin')->name('admin.')->group(function () {
+Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/infodeclientes', [InfoClienteController::class, 'index'])->name('infodeclientes.index');
     Route::get('/infodeclientes/{id}', [InfoClienteController::class, 'show'])->name('infodeclientes.show');
     Route::get('/infodeclientes/{id}/edit', [InfoClienteController::class, 'edit'])->name('infodeclientes.edit');
@@ -420,7 +432,7 @@ Route::middleware(['auth'])->prefix('menu/admin')->name('admin.')->group(functio
 */
 
 
-Route::middleware(['auth'])->prefix('menu/admin')->name('admin.')->group(function () {
+Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
     // Rutas de Empleados protegidas
     Route::get('/empleados', [EmpleadoController::class, 'index'])->name('empleados.index');
     Route::get('/empleados/create', [EmpleadoController::class, 'create'])->name('empleados.create');
@@ -433,11 +445,7 @@ Route::middleware(['auth'])->prefix('menu/admin')->name('admin.')->group(functio
 Route::post('/cobro/store', [CobrosController::class, 'store'])
     ->middleware('auth')
     ->name('cobros.store');
-=======
-Route::middleware(['auth'])
-    ->post(
-        '/cobro/store',
-        [CobrosController::class, 'store']
-    )
-    ->name('cobros.store');
->>>>>>> remotes/origin/administrador-de-cuenta-de-admin
+
+   Route::get('/menu/modulos', function () {
+    return Inertia::render('admin/Modulos');
+})->middleware(['auth'])->name('admin.modulos');

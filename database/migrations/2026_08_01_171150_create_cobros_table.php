@@ -16,6 +16,7 @@ return new class extends Migration
         $table->id();
         $table->string('nombre_cliente');
         $table->string('telefono');
+
         $table->string('concepto');
         $table->decimal('monto', 10, 2);
         $table->string('mano_de_obra');

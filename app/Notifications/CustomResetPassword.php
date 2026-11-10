@@ -40,7 +40,3 @@ class CustomResetPassword extends Notification
             ]);
     }
 }
-<<<<<<< HEAD
-=======
-
->>>>>>> remotes/origin/administrador-de-cuenta-de-admin

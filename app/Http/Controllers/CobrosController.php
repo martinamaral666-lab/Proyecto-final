@@ -13,7 +13,9 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 
 class CobrosController extends Controller
 {
@@ -26,20 +28,12 @@ class CobrosController extends Controller
 
     public function pdf(Cobros $cobro)
     {
-        $rutaPdf = 'recibos/recibo_' . $cobro->id . '.pdf';
-
-        abort_unless(
-            Storage::disk('public')->exists($rutaPdf),
-            404
-        );
-
-        return response()->file(
-            Storage::disk('public')->path($rutaPdf),
-            [
-                'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'inline; filename="recibo_' . $cobro->id . '.pdf"',
-            ]
-        );
+        // El PDF se genera en el momento con la vista actual
+        // (resources/views/cobros/pdf.blade.php). Antes se leía un archivo guardado
+        // al crear el cobro, por eso los cambios de diseño no llegaban a los recibos
+        // ya existentes y, si el archivo faltaba, daba 404.
+        return Pdf::loadView('cobros.pdf', compact('cobro'))
+            ->stream('recibo_' . $cobro->id . '.pdf');
     }
 
     public function create()
@@ -73,94 +67,90 @@ class CobrosController extends Controller
                 ->with('receipt_wait_seconds', $waitSeconds);
         }
 
-        RateLimiter::hit($cooldownKey, 15);
-
-
         /*
         |--------------------------------------------------------------------------
         | 1. VALIDAR LOS DATOS
         |--------------------------------------------------------------------------
+        | Antes el resultado de validate() no se guardaba en ninguna variable,
+        | por eso fallaba con "Undefined variable $validated".
         */
 
-  $request->validate([
-    'tipo_registro' => 'required|in:venta,mano_obra',
-    'nombre_cliente' => 'required|string|max:255',
-    'telefono' => 'required|string',
-    'concepto' => 'required|string|max:255',
-    'monto' => 'required|numeric|min:0',
-    'monto_base' => 'nullable|numeric|min:0',
-    'metodo_pago' => 'required|in:efectivo,tarjeta',
+        $validated = $request->validate([
+            'tipo_registro' => 'required|in:venta,mano_obra',
+            'nombre_cliente' => 'required|string|max:255',
+            'telefono' => 'required|string',
+            'concepto' => 'required|string|max:255',
+            'monto' => 'required|numeric|min:0',
+            'monto_base' => 'nullable|numeric|min:0',
+            'metodo_pago' => 'required|in:efectivo,tarjeta',
 
-    'mano_de_obra' => [
-        'nullable',
-        'required_if:tipo_registro,mano_obra',
-        'in:si,no',
-    ],
+            'mano_de_obra' => [
+                'nullable',
+                'required_if:tipo_registro,mano_obra',
+                'in:si,no',
+            ],
 
-    'motivo_no_realizado' => [
-        'nullable',
-        'string',
-        'max:255',
-        'required_if:mano_de_obra,no',
-    ],
+            // El motivo solo es obligatorio para mano de obra NO realizada.
+            // Una venta en caja puede mandar mano_de_obra = "no" sin motivo.
+            'motivo_no_realizado' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::requiredIf(
+                    fn () => $request->tipo_registro === 'mano_obra'
+                        && $request->mano_de_obra === 'no'
+                ),
+            ],
 
-    'productos' => 'sometimes|array',
-    'productos.*' => 'required|array:inventario_id,cantidad',
-    'productos.*.inventario_id' => 'required|integer|exists:inventarios,id',
-    'productos.*.cantidad' => 'required|integer|min:1',
-]);
+            'productos' => 'sometimes|array',
+            'productos.*' => 'required|array:inventario_id,cantidad',
+            'productos.*.inventario_id' => 'required|integer|exists:inventarios,id',
+            'productos.*.cantidad' => 'required|integer|min:1',
+        ]);
+
+        // El cooldown se aplica recién cuando los datos son válidos,
+        // así un error de tipeo no bloquea al usuario 15 segundos.
+        RateLimiter::hit($cooldownKey, 15);
 
         /*
         |--------------------------------------------------------------------------
         | 2. DETERMINAR LOS DATOS DE MANO DE OBRA
         |--------------------------------------------------------------------------
         |
-        | Venta en caja:
-        |   - mano_de_obra = no
-        |   - motivo = null
-        |
-        | Mano de obra realizada:
-        |   - mano_de_obra = si
-        |   - motivo = null
-        |
-        | Mano de obra no realizada:
-        |   - mano_de_obra = no
-        |   - motivo obligatorio
-        |
+        | Venta en caja:                 mano_de_obra = no, motivo = null
+        | Mano de obra realizada:        mano_de_obra = si, motivo = null
+        | Mano de obra no realizada:     mano_de_obra = no, motivo obligatorio
         */
 
-        $manoDeObra = $request->tipo_registro === 'mano_obra'
-            ? $request->mano_de_obra
+        $tipo = $validated['tipo_registro'];
+
+        $manoDeObra = $tipo === 'mano_obra'
+            ? ($validated['mano_de_obra'] ?? 'no')
             : 'no';
 
-        $motivoNoRealizado =
-            $request->tipo_registro === 'mano_obra'
-            && $manoDeObra === 'no'
-                ? $request->motivo_no_realizado
-                : null;
+        $motivoNoRealizado = ($tipo === 'mano_obra' && $manoDeObra === 'no')
+            ? ($validated['motivo_no_realizado'] ?? null)
+            : null;
 
         /*
         |--------------------------------------------------------------------------
-        | 3. GUARDAR EL COBRO
+        | 3. CALCULAR MONTOS Y GUARDAR EL COBRO (UNA SOLA VEZ)
         |--------------------------------------------------------------------------
+        | Antes se creaba el cobro dos veces (una acá y otra dentro de la
+        | transacción), lo que dejaba registros duplicados.
         */
-
-        $cobro = Cobros::create([
-            'tipo_registro' => $request->tipo_registro,
-            'user_id' => auth()->id(),
-            'nombre_cliente' => $request->nombre_cliente,
-            'telefono' => $request->telefono,
-            'concepto' => $request->concepto,
-            'monto' => $request->monto,
-            'metodo_pago' => $request->metodo_pago,
-            'mano_de_obra' => $manoDeObra,
-            'motivo_no_realizado' => $motivoNoRealizado,
-        ]);
 
         $cantidadesPorInventario = collect($validated['productos'] ?? [])
             ->groupBy('inventario_id')
             ->map(fn ($productos) => $productos->sum('cantidad'));
-        $montoManoObraEnCentavos = $validated['mano_de_obra'] === 'si'
+
+        // Monto manual (mano de obra, servicio u otros): se suma a los productos.
+        //  - Venta en caja: siempre se cuenta.
+        //  - Mano de obra: solo si fue realizada (si no se realizó, no se cobra).
+        // Antes, en una venta el monto escrito se ignoraba cuando había productos.
+        $contarMontoManual = $tipo === 'venta' || $manoDeObra === 'si';
+
+        $montoManoObraEnCentavos = $contarMontoManual
             ? (int) round(
                 (float) ($validated['monto_base'] ?? (
                     $cantidadesPorInventario->isEmpty() ? $validated['monto'] : 0
@@ -168,66 +158,82 @@ class CobrosController extends Controller
             )
             : 0;
 
-        $cobro = DB::transaction(function () use ($cantidadesPorInventario, $montoManoObraEnCentavos, $validated) {
-            $itemsInventario = Inventario::query()
-                ->whereIn('id', $cantidadesPorInventario->keys())
-                ->orderBy('id')
-                ->lockForUpdate()
-                ->get()
-                ->keyBy('id');
+        try {
+            $cobro = DB::transaction(function () use (
+                $cantidadesPorInventario,
+                $montoManoObraEnCentavos,
+                $validated,
+                $tipo,
+                $manoDeObra,
+                $motivoNoRealizado
+            ) {
+                $itemsInventario = Inventario::query()
+                    ->whereIn('id', $cantidadesPorInventario->keys())
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
 
-            foreach ($cantidadesPorInventario as $id => $cantidad) {
-                $item = $itemsInventario->get($id);
+                foreach ($cantidadesPorInventario as $id => $cantidad) {
+                    $item = $itemsInventario->get($id);
 
-                if (! $item || $cantidad > $item->stock_actual) {
-                    $nombreItem = $item?->nombre_item ?? 'seleccionado';
+                    if (! $item || $cantidad > $item->stock_actual) {
+                        $nombreItem = $item?->nombre_item ?? 'seleccionado';
 
-                    throw ValidationException::withMessages([
-                        'productos' => "No hay suficiente stock para {$nombreItem}.",
-                    ]);
+                        throw ValidationException::withMessages([
+                            'productos' => "No hay suficiente stock para {$nombreItem}.",
+                        ]);
+                    }
                 }
-            }
 
-            $montoProductosEnCentavos = 0;
-            $productosRecibo = [];
+                $montoProductosEnCentavos = 0;
+                $productosRecibo = [];
 
-            foreach ($cantidadesPorInventario as $id => $cantidad) {
-                $item = $itemsInventario->get($id);
-                $precioUnitarioEnCentavos = (int) round((float) $item->precio * 100);
-                $subtotalEnCentavos = $precioUnitarioEnCentavos * $cantidad;
-                $montoProductosEnCentavos += $subtotalEnCentavos;
-                $productosRecibo[] = [
-                    'nombre_item' => $item->nombre_item,
-                    'cantidad' => $cantidad,
-                    'precio_unitario' => number_format($precioUnitarioEnCentavos / 100, 2, '.', ''),
-                    'subtotal' => number_format($subtotalEnCentavos / 100, 2, '.', ''),
-                ];
-                $item->stock_actual -= $cantidad;
-                $item->save();
-            }
+                foreach ($cantidadesPorInventario as $id => $cantidad) {
+                    $item = $itemsInventario->get($id);
+                    $precioUnitarioEnCentavos = (int) round((float) $item->precio * 100);
+                    $subtotalEnCentavos = $precioUnitarioEnCentavos * $cantidad;
+                    $montoProductosEnCentavos += $subtotalEnCentavos;
 
-            $montoTotal = number_format(
-                ($montoManoObraEnCentavos + $montoProductosEnCentavos) / 100,
-                2,
-                '.',
-                ''
-            );
+                    $productosRecibo[] = [
+                        'nombre_item' => $item->nombre_item,
+                        'cantidad' => $cantidad,
+                        'precio_unitario' => number_format($precioUnitarioEnCentavos / 100, 2, '.', ''),
+                        'subtotal' => number_format($subtotalEnCentavos / 100, 2, '.', ''),
+                    ];
 
-            return Cobros::create([
-                'nombre_cliente' => $validated['nombre_cliente'],
-                'telefono' => $validated['telefono'],
-                'concepto' => $validated['concepto'],
-                'monto' => $montoTotal,
-                'productos' => $productosRecibo,
-                'monto_mano_obra' => number_format($montoManoObraEnCentavos / 100, 2, '.', ''),
-                'mano_de_obra' => $validated['mano_de_obra'],
-                'motivo_no_realizado' => $validated['mano_de_obra'] === 'no'
-                    ? $validated['motivo_no_realizado']
-                    : null,
-            ]);
-        });
+                    $item->stock_actual -= $cantidad;
+                    $item->save();
+                }
 
-        //  Genera el PDF y enviar email
+                $montoTotal = number_format(
+                    ($montoManoObraEnCentavos + $montoProductosEnCentavos) / 100,
+                    2,
+                    '.',
+                    ''
+                );
+
+                return Cobros::create([
+                    'tipo_registro' => $tipo,
+                    'user_id' => auth()->id(),
+                    'nombre_cliente' => $validated['nombre_cliente'],
+                    'telefono' => $validated['telefono'],
+                    'concepto' => $validated['concepto'],
+                    'metodo_pago' => $validated['metodo_pago'],
+                    'monto' => $montoTotal,
+                    'productos' => $productosRecibo,
+                    'monto_mano_obra' => number_format($montoManoObraEnCentavos / 100, 2, '.', ''),
+                    'mano_de_obra' => $manoDeObra,
+                    'motivo_no_realizado' => $motivoNoRealizado,
+                ]);
+            });
+        } catch (ValidationException $e) {
+            // Falta de stock: se libera el cooldown para que pueda corregir y reintentar.
+            RateLimiter::clear($cooldownKey);
+
+            throw $e;
+        }
+
         /*
         |--------------------------------------------------------------------------
         | 4. GENERAR PDF Y ENVIAR EMAIL
@@ -286,7 +292,7 @@ class CobrosController extends Controller
         $telefonoLimpio = preg_replace(
             '/[^0-9]/',
             '',
-            $request->telefono
+            $validated['telefono']
         );
 
         if (str_starts_with($telefonoLimpio, '0')) {
@@ -298,69 +304,39 @@ class CobrosController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | 6. PREPARAR INFORMACIÓN DE MANO DE OBRA
+        | 6. PREPARAR LOS DATOS DEL RECIBO
         |--------------------------------------------------------------------------
+        | Antes había dos bloques de ticket: el primero usaba $estadoManoObra
+        | antes de definirla y el segundo lo pisaba. Ahora hay uno solo, con
+        | el detalle de productos y el monto de mano de obra incluidos.
         */
 
-        $detalleProductos = collect($cobro->productos ?? [])
+        if ($tipo === 'venta') {
+            $estadoManoObra = 'No corresponde';
+        } elseif ($manoDeObra === 'si') {
+            $estadoManoObra = 'Realizada';
+        } else {
+            $estadoManoObra = 'No realizada (' . ($motivoNoRealizado ?? 'N/A') . ')';
+        }
+
+        $metodoPagoTexto = $validated['metodo_pago'] === 'efectivo'
+            ? 'Efectivo'
+            : 'Tarjeta';
+
+        $tipoRegistroTexto = $tipo === 'venta'
+            ? 'Venta en caja'
+            : 'Mano de obra';
+
+        $productosCobro = is_array($cobro->productos)
+            ? $cobro->productos
+            : (json_decode($cobro->productos ?? '[]', true) ?: []);
+
+        $detalleProductos = collect($productosCobro)
             ->map(fn (array $producto) => '* '.$producto['nombre_item']
                 .' x'.$producto['cantidad']
                 .' — $'.number_format((float) $producto['precio_unitario'], 2).' c/u'
                 .' = $'.number_format((float) $producto['subtotal'], 2))
             ->implode("\n");
-
-        // Fecha en formato local de Uruguay para el ticket
-        $fechaLocal = $cobro->created_at->timezone('America/Montevideo')->format('d/m/Y H:i');
-
-        //  Formato Ticket de Pago para WhatsApp
-        $ticketTexto = "==========================\n"
-                     ."       *RECIBO DE PAGO*       \n"
-                     ."==========================\n"
-                     .'*N° Comprobante:* #'.str_pad($cobro->id, 6, '0', STR_PAD_LEFT)."\n"
-                     .'*Fecha:* '.$fechaLocal."\n\n"
-                     .'*Cliente:* '.$request->nombre_cliente."\n"
-                     .'*Concepto:* '.$request->concepto."\n"
-                     .($detalleProductos !== ''
-                         ? "*Productos:*\n{$detalleProductos}\n"
-                         : '')
-                     .'*Mano de Obra:* '.$estadoManoObra."\n"
-                     .((float) $cobro->monto_mano_obra > 0
-                         ? '*Monto de mano de obra:* $'.number_format((float) $cobro->monto_mano_obra, 2)."\n"
-                         : '')
-                     ."--------------------------\n"
-                     .'*MONTO TOTAL:* $'.number_format((float) $cobro->monto, 2)."\n"
-                     ."==========================\n\n"
-                     .'¡Muchas gracias por su preferencia!';
-        if ($request->tipo_registro === 'venta') {
-
-            $estadoManoObra = 'No corresponde';
-
-        } elseif ($request->mano_de_obra === 'si') {
-
-            $estadoManoObra = 'Realizada';
-
-        } else {
-
-            $estadoManoObra = 'No realizada (' .
-                ($request->motivo_no_realizado ?? 'N/A') .
-                ')';
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | 7. PREPARAR INFORMACIÓN DEL MEDIO DE PAGO
-        |--------------------------------------------------------------------------
-        */
-
-        $metodoPagoTexto = $request->metodo_pago === 'efectivo'
-            ? 'Efectivo'
-            : 'Tarjeta';
-
-        /*
-        |--------------------------------------------------------------------------
-        | 8. FECHA LOCAL DE URUGUAY
-        |--------------------------------------------------------------------------
-        */
 
         $fechaLocal = $cobro->created_at
             ->timezone('America/Montevideo')
@@ -368,58 +344,37 @@ class CobrosController extends Controller
 
         /*
         |--------------------------------------------------------------------------
-        | 9. TEXTO DEL RECIBO PARA WHATSAPP
+        | 7. TEXTO DEL RECIBO PARA WHATSAPP
         |--------------------------------------------------------------------------
         */
 
-        $tipoRegistroTexto = $request->tipo_registro === 'venta'
-            ? 'Venta en caja'
-            : 'Mano de obra';
-
-        $ticketTexto =
-            "==========================\n"
-            . "       *RECIBO DE PAGO*       \n"
-            . "==========================\n"
-            . "*N° Comprobante:* #"
-            . str_pad(
-                $cobro->id,
-                6,
-                '0',
-                STR_PAD_LEFT
-            )
-            . "\n"
-            . "*Fecha:* "
-            . $fechaLocal
-            . "\n\n"
-            . "*Tipo de registro:* "
-            . $tipoRegistroTexto
-            . "\n"
-            . "*Cliente:* "
-            . $request->nombre_cliente
-            . "\n"
-            . "*Concepto:* "
-            . $request->concepto
-            . "\n"
-            . "*Medio de pago:* "
-            . $metodoPagoTexto
-            . "\n"
-            . "*Mano de Obra:* "
-            . $estadoManoObra
-            . "\n"
-            . "--------------------------\n"
-            . "*MONTO TOTAL:* $"
-            . number_format(
-                $request->monto,
-                2
-            )
-            . "\n"
-            . "==========================\n\n"
-            . "¡Muchas gracias por su preferencia!";
+        $ticketTexto = "==========================\n"
+            ."       *RECIBO DE PAGO*       \n"
+            ."==========================\n"
+            .'*N° Comprobante:* #'.str_pad($cobro->id, 6, '0', STR_PAD_LEFT)."\n"
+            .'*Fecha:* '.$fechaLocal."\n\n"
+            .'*Tipo de registro:* '.$tipoRegistroTexto."\n"
+            .'*Cliente:* '.$validated['nombre_cliente']."\n"
+            .'*Concepto:* '.$validated['concepto']."\n"
+            .'*Medio de pago:* '.$metodoPagoTexto."\n"
+            .($detalleProductos !== ''
+                ? "*Productos:*\n{$detalleProductos}\n"
+                : '')
+            .'*Mano de Obra:* '.$estadoManoObra."\n"
+            .((float) $cobro->monto_mano_obra > 0
+                ? '*'.($tipo === 'venta' ? 'Servicio / monto adicional' : 'Monto de mano de obra').':* $'.number_format((float) $cobro->monto_mano_obra, 2)."\n"
+                : '')
+            ."--------------------------\n"
+            .'*MONTO TOTAL:* $'.number_format((float) $cobro->monto, 2)."\n"
+            ."==========================\n\n"
+            .'¡Muchas gracias por su preferencia!';
 
         /*
         |--------------------------------------------------------------------------
-        | 10. ABRIR WHATSAPP
+        | 8. ABRIR WHATSAPP
         |--------------------------------------------------------------------------
+        | Con Inertia, un redirect()->away() hacia otro dominio falla en el
+        | navegador (CORS). Inertia::location() hace la redirección completa.
         */
 
         $urlWhatsapp =
@@ -428,7 +383,7 @@ class CobrosController extends Controller
             . '&text='
             . urlencode($ticketTexto);
 
-        return redirect()->away($urlWhatsapp);
+        return Inertia::location($urlWhatsapp);
     }
 
     public function adminmenu()

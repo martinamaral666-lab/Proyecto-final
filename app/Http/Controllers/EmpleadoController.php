@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+use Inertia\Inertia;
 
 class EmpleadoController extends Controller
 {
@@ -11,16 +13,45 @@ class EmpleadoController extends Controller
     {
         $empleados = User::where('rol', 'empleado')->get();
 
-        return view('admin.empleados.index', compact('empleados'));
+        return Inertia::render('admin/empleados/index', [
+            'empleados' => $empleados,
+            'routes' => [
+                'adminMenu' => route('admin.menu'),
+                'empleadosCreate' => route('admin.empleados.create'),
+            ]
+        ]);
     }
 
     public function create()
     {
-        return view('admin.empleados.create');
+        $cooldownKey = 'employee-create:'.request()->user()->getAuthIdentifier();
+        $employeeWaitSeconds = RateLimiter::availableIn($cooldownKey);
+
+        return Inertia::render('admin/empleados/create', [
+            'employeeWaitSeconds' => max(0, $employeeWaitSeconds),
+            'routes' => [
+                'adminMenu' => route('admin.menu'),
+                'empleadosStore' => route('admin.empleados.store'),
+            ]
+        ]);
     }
 
     public function store(Request $request)
     {
+        $cooldownKey = 'employee-create:'.$request->user()->getAuthIdentifier();
+
+        if (RateLimiter::tooManyAttempts($cooldownKey, 1)) {
+            $waitSeconds = RateLimiter::availableIn($cooldownKey);
+
+            return back()
+                ->withErrors([
+                    'save' => "Espera {$waitSeconds} segundos antes de registrar otro empleado.",
+                ])
+                ->with('employee_wait_seconds', $waitSeconds);
+        }
+
+        RateLimiter::hit($cooldownKey, 15);
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users',
@@ -31,7 +62,7 @@ class EmpleadoController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => bcrypt($request->password),
-            'rol' => 'empleado' // Aseguramos que se guarde con el rol correspondiente
+            'rol' => 'empleado'
         ]);
 
         return redirect()->route('admin.empleados.index')->with('success', 'Empleado registrado con éxito.');
@@ -40,7 +71,15 @@ class EmpleadoController extends Controller
     public function edit($id)
     {
         $empleado = User::findOrFail($id);
-        return view('admin.empleados.editar', compact('empleado'));
+
+        return Inertia::render('admin/empleados/editar', [
+            'empleado' => $empleado,
+            'routes' => [
+                'adminMenu' => route('admin.menu'),
+                'empleadosIndex' => route('admin.empleados.index'),
+                'empleadosUpdate' => route('admin.empleados.update', $empleado->id),
+            ]
+        ]);
     }
 
     public function update(Request $request, $id)
